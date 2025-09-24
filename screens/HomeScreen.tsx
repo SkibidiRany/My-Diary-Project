@@ -2,6 +2,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { MotiView } from 'moti';
 import React, { useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DiaryCard from '../components/DiaryCard';
@@ -15,8 +16,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { entries, fetchEntries } = useDiaryStore();
   const isFocused = useIsFocused();
 
-  // The useLayoutEffect hook for the header button has been removed.
-
   useEffect(() => {
     if (isFocused) {
       fetchEntries();
@@ -28,10 +27,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id!.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => navigation.navigate('ViewEntry', { entryId: item.id! })}>
-            <DiaryCard entry={item} />
-          </TouchableOpacity>
+        renderItem={({ item, index }) => (
+          <MotiView
+            from={{ opacity: 0, translateY: 50 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 300, delay: index * 100 }}
+          >
+            <TouchableOpacity onPress={() => navigation.navigate('ViewEntry', { entryId: item.id! })}>
+              <DiaryCard entry={item} />
+            </TouchableOpacity>
+          </MotiView>
         )}
         ListHeaderComponent={<Text style={styles.listHeader}>Recent Entries</Text>}
         ListEmptyComponent={<Text style={styles.emptyText}>No entries yet. Write your first one!</Text>}
@@ -46,7 +51,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
