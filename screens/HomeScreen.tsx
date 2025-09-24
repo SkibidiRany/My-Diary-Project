@@ -2,7 +2,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useLayoutEffect } from 'react';
+import React, { useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DiaryCard from '../components/DiaryCard';
 import { COLORS } from '../constants/theme';
@@ -15,16 +15,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { entries, fetchEntries } = useDiaryStore();
   const isFocused = useIsFocused();
 
-  // This hook adds the button to the header
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Feather name="user" size={24} color={COLORS.primary} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
+  // The useLayoutEffect hook for the header button has been removed.
 
   useEffect(() => {
     if (isFocused) {
@@ -55,6 +46,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
