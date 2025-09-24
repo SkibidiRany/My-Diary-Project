@@ -39,6 +39,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
         }
     }
     const result = await ImagePicker.launchImageLibraryAsync({
+      // THE FIX: Reverted to the older name that works with your library version
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 1,
     });
@@ -60,8 +61,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
     setIsLoading(true);
     let finalImageUri = imageUri;
 
-    // Check for local file URIs from native and web
-    if (imageUri && (imageUri.startsWith('file://') || imageUri.startsWith('data:'))) {
+    if (imageUri && (imageUri.startsWith('file://') || imageUri.startsWith('data:') || imageUri.startsWith('blob:'))) {
       try {
         finalImageUri = await uploadImageAndGetURL(imageUri);
       } catch (error) {
