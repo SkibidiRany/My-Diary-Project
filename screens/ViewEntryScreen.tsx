@@ -1,7 +1,6 @@
-// screens/ViewEntryScreen.tsx
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, View, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import StyledButton from '../components/StyledButton';
 import { COLORS } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -10,14 +9,13 @@ import { useDiaryStore } from '../store/diaryStore';
 type ViewScreenProps = NativeStackScreenProps<RootStackParamList, 'ViewEntry'>;
 
 export default function ViewEntryScreen({ route, navigation }: ViewScreenProps) {
+  const [imageModalVisible, setImageModalVisible] = useState(false);
   const { entryId } = route.params;
   const { entries, deleteEntry } = useDiaryStore();
   const entry = entries.find(e => e.id === entryId);
 
   React.useLayoutEffect(() => {
-    navigation.setOptions({
-      title: entry ? entry.title : 'View Entry',
-    });
+    navigation.setOptions({ title: entry ? entry.title : 'View Entry' });
   }, [navigation, entry]);
 
   if (!entry) {
@@ -34,21 +32,15 @@ export default function ViewEntryScreen({ route, navigation }: ViewScreenProps) 
         await deleteEntry(entryId);
         navigation.goBack();
       } catch (error) {
-        console.error("Failed to delete entry:", error);
         Alert.alert("Error", "Could not delete the entry.");
       }
     };
-
     if (Platform.OS === 'web') {
       if (window.confirm("Are you sure you want to permanently delete this diary entry?")) {
         deleteAction();
       }
     } else {
-      Alert.alert(
-        "Delete Entry",
-        "Are you sure you want to permanently delete this diary entry?",
-        [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: deleteAction }]
-      );
+      Alert.alert("Delete Entry", "Are you sure you want to permanently delete this diary entry?", [{ text: "Cancel" }, { text: "Delete", style: "destructive", onPress: deleteAction }]);
     }
   };
 
@@ -61,14 +53,39 @@ export default function ViewEntryScreen({ route, navigation }: ViewScreenProps) 
   };
 
   const createdDate = new Date(entry.createdAt).toLocaleString([], dateOptions);
-  
-  const modifiedDate = entry.modifiedAt 
-    ? new Date(entry.modifiedAt).toLocaleString([], dateOptions)
-    : null;
+  const modifiedDate = entry.modifiedAt ? new Date(entry.modifiedAt).toLocaleString([], dateOptions) : null;
 
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      {entry.imageUri && <Image source={{ uri: entry.imageUri }} style={styles.image} />}
+      {entry.imageUri && (
+        <>
+          <TouchableOpacity onPress={() => setImageModalVisible(true)}>
+            <Image 
+              source={{ uri: entry.imageUri }} 
+              style={styles.image} 
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={imageModalVisible}
+            onRequestClose={() => setImageModalVisible(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalContainer} 
+              activeOpacity={1} 
+              onPressOut={() => setImageModalVisible(false)}
+            >
+              <Image 
+                source={{ uri: entry.imageUri }} 
+                style={styles.modalImage} 
+                resizeMode="contain" 
+              />
+            </TouchableOpacity>
+          </Modal>
+        </>
+      )}
       <View style={styles.contentContainer}>
         <View style={styles.header}>
           {entry.emoji && <Text style={styles.emoji}>{entry.emoji}</Text>}
@@ -97,15 +114,18 @@ const styles = StyleSheet.create({
     title: { fontSize: 24, fontWeight: 'bold', flex: 1, color: COLORS.textPrimary },
     date: { fontSize: 13, color: COLORS.textSecondary },
     timestampContainer: {
-        marginBottom: 20,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: COLORS.background,
-        borderRadius: 8,
-        borderWidth: 1,
+        marginBottom: 20, paddingVertical: 8, paddingHorizontal: 12,
+        backgroundColor: COLORS.background, borderRadius: 8, borderWidth: 1,
         borderColor: COLORS.border,
     },
     contentText: { fontSize: 16, lineHeight: 24, color: COLORS.textPrimary },
     buttonRow: { flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 20, paddingTop: 10, gap: 10 },
     flexButton: { flex: 1 },
+    modalContainer: {
+        flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        justifyContent: 'center', alignItems: 'center',
+    },
+    modalImage: {
+        width: '100%', height: '100%',
+    },
 });

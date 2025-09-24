@@ -1,8 +1,6 @@
-// components/DiaryCard.tsx
-
-import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { COLORS, FONT_SIZES } from '../constants/theme'; // Import theme
+import React, { useState } from 'react';
+import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { COLORS, FONT_SIZES } from '../constants/theme';
 import { DiaryEntry } from '../types';
 
 interface DiaryCardProps {
@@ -10,17 +8,46 @@ interface DiaryCardProps {
 }
 
 export default function DiaryCard({ entry }: DiaryCardProps) {
+  const [modalVisible, setModalVisible] = useState(false);
   const displayDate = new Date(entry.createdAt).toLocaleDateString();
 
   return (
     <View style={styles.card}>
       {entry.imageUri && (
-        <Image source={{ uri: entry.imageUri }} style={styles.image} />
+        <>
+          <TouchableOpacity onPress={() => setModalVisible(true)}>
+            <Image
+              source={{ uri: entry.imageUri }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalContainer}
+              activeOpacity={1}
+              onPressOut={() => setModalVisible(false)}
+            >
+              <Image
+                source={{ uri: entry.imageUri }}
+                style={styles.modalImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </Modal>
+        </>
       )}
       <View style={styles.contentContainer}>
         <View style={styles.header}>
           {entry.emoji && <Text style={styles.emoji}>{entry.emoji}</Text>}
-          <Text style={styles.title} numberOfLines={1}>{entry.title}</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {entry.title}
+          </Text>
         </View>
         <Text style={styles.date}>{displayDate}</Text>
       </View>
@@ -65,5 +92,15 @@ const styles = StyleSheet.create({
   date: {
     fontSize: FONT_SIZES.caption,
     color: COLORS.textSecondary,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
   },
 });

@@ -1,4 +1,3 @@
-// screens/NewEntryScreen.tsx
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
@@ -10,8 +9,6 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { uploadImageAndGetURL } from '../services/firestoreService';
 import { useDiaryStore } from '../store/diaryStore';
 
-const EMOJIS = ['😊', '😄', '😢', '😠', '🎉', '💡', '🤔', '😴'];
-
 type NewEntryScreenProps = NativeStackScreenProps<RootStackParamList, 'NewEntry'>;
 
 export default function NewEntryScreen({ route, navigation }: NewEntryScreenProps) {
@@ -21,6 +18,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
   const [content, setContent] = useState(existingEntry?.content || '');
   const [imageUri, setImageUri] = useState<string | null>(existingEntry?.imageUri || null);
   const [emoji, setEmoji] = useState<string | null>(existingEntry?.emoji || null);
+  const [tempEmoji, setTempEmoji] = useState(existingEntry?.emoji || '');
   const [isModalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,7 +37,6 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
         }
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      // THE FIX: Reverted to the older name that works with your library version
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 1,
     });
@@ -48,8 +45,8 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
     }
   };
   
-  const handleSelectEmoji = (selectedEmoji: string) => {
-    setEmoji(selectedEmoji);
+  const handleSelectEmoji = () => {
+    setEmoji(tempEmoji);
     setModalVisible(false);
   };
 
@@ -60,7 +57,6 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
     }
     setIsLoading(true);
     let finalImageUri = imageUri;
-
     if (imageUri && (imageUri.startsWith('file://') || imageUri.startsWith('data:') || imageUri.startsWith('blob:'))) {
       try {
         finalImageUri = await uploadImageAndGetURL(imageUri);
@@ -109,15 +105,15 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
       <Modal animationType="slide" transparent={true} visible={isModalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>How are you feeling?</Text>
-              <View style={styles.emojiContainer}>
-                {EMOJIS.map((item) => (
-                  <TouchableOpacity key={item} onPress={() => handleSelectEmoji(item)}>
-                    <Text style={styles.emoji}>{item}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <StyledButton title="Close" onPress={() => setModalVisible(false)} />
+              <Text style={styles.modalTitle}>What's your mood?</Text>
+              <StyledTextInput 
+                style={styles.emojiInput}
+                placeholder="Type emojis here..."
+                value={tempEmoji}
+                onChangeText={setTempEmoji}
+                maxLength={30}
+              />
+              <StyledButton title="Set Mood" onPress={handleSelectEmoji} />
             </View>
           </View>
       </Modal>
@@ -135,8 +131,11 @@ const styles = StyleSheet.create({
     imagePreview: { width: '100%', height: 200, borderRadius: 8, marginBottom: 16, backgroundColor: '#eee' },
     contentInput: { minHeight: 150, textAlignVertical: 'top' },
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-    modalContent: { backgroundColor: 'white', padding: 20, borderRadius: 10, width: '80%', alignItems: 'center' },
-    modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
-    emojiContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 },
-    emoji: { fontSize: 40, margin: 10 },
+    modalContent: { backgroundColor: 'white', padding: 20, borderRadius: 10, width: '80%', alignItems: 'stretch' },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+    emojiInput: {
+      fontSize: 24,
+      textAlign: 'center',
+      marginBottom: 20,
+    }
 });
