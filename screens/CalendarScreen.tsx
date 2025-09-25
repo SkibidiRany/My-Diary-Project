@@ -1,6 +1,6 @@
-import { useIsFocused, useNavigation } from '@react-navigation/native';
+// screens/CalendarScreen.tsx
+import { useIsFocused, useNavigation, CommonActions } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { MotiView } from 'moti';
 import React, { useMemo, useState, useEffect } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
@@ -26,9 +26,11 @@ export default function CalendarScreen() {
       );
       if (entriesOnDay.length > 0) {
         setModalVisible(true);
+      } else {
+        setSelectedDate('');
       }
     }
-  }, [isFocused]);
+  }, [isFocused, entries, selectedDate]);
   
   const markedDates = useMemo(() => {
     const marks: { [key: string]: { marked: true; dotColor: string } } = {};
@@ -54,10 +56,15 @@ export default function CalendarScreen() {
 
   const handleEntryPress = (entryId: number) => {
     setModalVisible(false);
-    navigation.navigate('Diary', {
-      screen: 'ViewEntry',
-      params: { entryId },
-    });
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Diary',
+        params: {
+          screen: 'ViewEntry',
+          params: { entryId },
+        },
+      })
+    );
   };
 
   const handleCloseModal = () => {
@@ -98,28 +105,19 @@ export default function CalendarScreen() {
           style={styles.modalContainer}
           onPress={handleCloseModal}
         >
-          <Pressable>
-            <MotiView 
-              from={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'timing', duration: 200 }}
-              style={styles.modalContent}
-            >
+          <Pressable style={styles.modalContent}>
               <Text style={styles.modalTitle}>Entries for {new Date(selectedDate + 'T00:00:00').toLocaleDateString()}</Text>
-              <View style={styles.listContainer}>
-                <FlatList
-                  data={entriesForSelectedDay}
-                  keyExtractor={(item) => item.id!.toString()}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.entryItem} onPress={() => handleEntryPress(item.id!)}>
-                      <Text style={styles.entryEmoji}>{item.emoji}</Text>
-                      <Text style={styles.entryTitle} numberOfLines={1}>{item.title}</Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              </View>
+              <FlatList
+                data={entriesForSelectedDay}
+                keyExtractor={(item) => item.id!.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.entryItem} onPress={() => handleEntryPress(item.id!)}>
+                    <Text style={styles.entryEmoji}>{item.emoji}</Text>
+                    <Text style={styles.entryTitle} numberOfLines={1}>{item.title}</Text>
+                  </TouchableOpacity>
+                )}
+              />
               <StyledButton title="Close" onPress={handleCloseModal} />
-            </MotiView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -132,16 +130,14 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: {
     backgroundColor: COLORS.card, borderRadius: 12, padding: SPACING.medium,
-    width: '90%', height: '55%', shadowColor: '#000',
+    width: '90%', height: '70%', shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25,
     shadowRadius: 4, elevation: 5,
-    display: 'flex', flexDirection: 'column',
   },
   modalTitle: {
     fontSize: FONT_SIZES.subtitle, fontWeight: 'bold', color: COLORS.textPrimary,
     marginBottom: SPACING.medium, textAlign: 'center',
   },
-  listContainer: { flex: 1, marginBottom: SPACING.medium, },
   entryItem: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.background,
     padding: SPACING.medium, borderRadius: 8, marginBottom: SPACING.small,

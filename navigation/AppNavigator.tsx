@@ -12,16 +12,14 @@ import ProfileScreen from '../screens/ProfileScreen';
 import ViewEntryScreen from '../screens/ViewEntryScreen';
 import { DiaryEntry } from '../types';
 
-// This type is for the screens INSIDE the "Diary" tab's stack
 export type RootStackParamList = {
   Home: undefined;
   NewEntry: { entry?: DiaryEntry };
   ViewEntry: { entryId: number };
 };
 
-// This NEW type is for the TABS at the bottom of the screen
 export type RootTabParamList = {
-  Diary: NavigatorScreenParams<RootStackParamList>; // Tells TS that "Diary" has a nested stack
+  Diary: NavigatorScreenParams<RootStackParamList>;
   Calendar: undefined;
   Profile: undefined;
 };
