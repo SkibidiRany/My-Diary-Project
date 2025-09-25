@@ -1,15 +1,15 @@
 // screens/CalendarScreen.tsx
 import { useIsFocused, useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useMemo, useState, useEffect } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import StyledButton from '../components/StyledButton';
 import { COLORS, FONT_SIZES, SPACING } from '../constants/theme';
-import { RootTabParamList } from '../navigation/AppNavigator';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { useDiaryStore } from '../store/diaryStore';
 
-type CalendarNavigationProp = BottomTabNavigationProp<RootTabParamList>;
+type CalendarNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function CalendarScreen() {
   const navigation = useNavigation<CalendarNavigationProp>();
@@ -54,13 +54,13 @@ export default function CalendarScreen() {
     }
   };
 
+  /**
+   * Navigates to the ViewEntry modal screen for the selected entry.
+   * @param entryId The ID of the diary entry to view.
+   */
   const handleEntryPress = (entryId: number) => {
     setModalVisible(false);
-    // ✅ CORRECTED NAVIGATION CALL
-    navigation.navigate('Diary', {
-      screen: 'ViewEntry',
-      params: { entryId },
-    });
+    navigation.navigate('ViewEntry', { entryId });
   };
 
   const handleCloseModal = () => {

@@ -1,16 +1,14 @@
 // screens/HomeScreen.tsx
 import { Feather } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MotiView } from 'moti';
 import React, { useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DiaryCard from '../components/DiaryCard';
 import { COLORS } from '../constants/theme';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { HomeScreenProps } from '../navigation/AppNavigator';
 import { useDiaryStore } from '../store/diaryStore';
 
-type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { entries, fetchEntries } = useDiaryStore();
@@ -63,6 +61,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 12,
     paddingHorizontal: 16,
+    color: COLORS.textPrimary,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -72,7 +71,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
-    color: '#888',
+    color: COLORS.textSecondary,
   },
   fab: {
     position: 'absolute',
