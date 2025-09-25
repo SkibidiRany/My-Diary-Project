@@ -1,5 +1,5 @@
 // screens/CalendarScreen.tsx
-import { useIsFocused, useNavigation, CommonActions } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import React, { useMemo, useState, useEffect } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -31,7 +31,7 @@ export default function CalendarScreen() {
       }
     }
   }, [isFocused, entries, selectedDate]);
-  
+
   const markedDates = useMemo(() => {
     const marks: { [key: string]: { marked: true; dotColor: string } } = {};
     entries.forEach((entry) => {
@@ -56,15 +56,11 @@ export default function CalendarScreen() {
 
   const handleEntryPress = (entryId: number) => {
     setModalVisible(false);
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: 'Diary',
-        params: {
-          screen: 'ViewEntry',
-          params: { entryId },
-        },
-      })
-    );
+    // ✅ CORRECTED NAVIGATION CALL
+    navigation.navigate('Diary', {
+      screen: 'ViewEntry',
+      params: { entryId },
+    });
   };
 
   const handleCloseModal = () => {
@@ -106,18 +102,18 @@ export default function CalendarScreen() {
           onPress={handleCloseModal}
         >
           <Pressable style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Entries for {new Date(selectedDate + 'T00:00:00').toLocaleDateString()}</Text>
-              <FlatList
-                data={entriesForSelectedDay}
-                keyExtractor={(item) => item.id!.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.entryItem} onPress={() => handleEntryPress(item.id!)}>
-                    <Text style={styles.entryEmoji}>{item.emoji}</Text>
-                    <Text style={styles.entryTitle} numberOfLines={1}>{item.title}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-              <StyledButton title="Close" onPress={handleCloseModal} />
+            <Text style={styles.modalTitle}>Entries for {new Date(selectedDate + 'T00:00:00').toLocaleDateString()}</Text>
+            <FlatList
+              data={entriesForSelectedDay}
+              keyExtractor={(item) => item.id!.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.entryItem} onPress={() => handleEntryPress(item.id!)}>
+                  <Text style={styles.entryEmoji}>{item.emoji}</Text>
+                  <Text style={styles.entryTitle} numberOfLines={1}>{item.title}</Text>
+                </TouchableOpacity>
+              )}
+            />
+            <StyledButton title="Close" onPress={handleCloseModal} />
           </Pressable>
         </Pressable>
       </Modal>
@@ -130,7 +126,7 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: {
     backgroundColor: COLORS.card, borderRadius: 12, padding: SPACING.medium,
-    width: '90%', height: '70%', shadowColor: '#000',
+    width: '90%', maxHeight: '70%', shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25,
     shadowRadius: 4, elevation: 5,
   },
