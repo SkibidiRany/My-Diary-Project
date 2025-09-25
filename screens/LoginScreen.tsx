@@ -1,6 +1,6 @@
 // screens/LoginScreen.tsx
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, Alert } from 'react-native';
 import StyledButton from '../components/StyledButton';
 import { COLORS } from '../constants/theme';
 // This is the corrected import line
@@ -14,9 +14,9 @@ export default function LoginScreen() {
     try {
       await signInWithGoogle();
     } catch (error) {
-      // It's good practice to stop loading even if there's an error
       setLoading(false);
-      console.log("Sign in was cancelled or failed");
+      Alert.alert("Sign-In Error", (error as Error).message);
+      console.log("Sign-In Error" + (error as Error).message);
     }
     // The onAuthStateChanged listener handles navigation, so we don't need to setLoading(false) on success.
   };
