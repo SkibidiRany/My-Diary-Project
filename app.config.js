@@ -1,4 +1,17 @@
 // app.config.js
+const fs = require('fs');
+const path = require('path');
+
+// Decode the Base64 secret and write it to google-services.json
+// This hook ensures the file exists on the build server before Gradle needs it.
+if (process.env.GOOGLE_SERVICES_JSON_BASE64) {
+  const googleServicesJson = Buffer.from(
+    process.env.GOOGLE_SERVICES_JSON_BASE64,
+    'base64'
+  ).toString('utf-8');
+  fs.writeFileSync(path.join(__dirname, 'google-services.json'), googleServicesJson);
+}
+
 const IS_WEB = process.env.EXPO_PLATFORM === 'web';
 
 const googleSignInPlugin = [
@@ -27,7 +40,7 @@ export default {
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png", 
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
