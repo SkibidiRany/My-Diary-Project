@@ -14,3 +14,17 @@ export interface DiaryEntry {
   modifiedAt?: string | null; 
   isPrivate: boolean;
 }
+
+/**
+ * Defines the structure for a user's public-facing profile data.
+ */
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  username?: string;
+  birthdate?: string;
+  pronouns?: string;
+  bio?: string;
+}

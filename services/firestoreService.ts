@@ -1,5 +1,5 @@
 // services/firestoreService.ts
-import { DiaryEntry } from '../types';
+import { DiaryEntry, UserProfile } from '../types';
 import { auth, db, storage } from './firebase';
 
 // --- IMAGE UPLOAD ---
@@ -19,7 +19,7 @@ export const uploadImageAndGetURL = async (uri: string): Promise<string> => {
   return await fileRef.getDownloadURL();
 };
 
-// --- FIRESTORE DATA SYNC ---
+// --- FIRESTORE DIARY ENTRY SYNC ---
 const getEntriesCollection = () => {
   const userId = auth.currentUser?.uid;
   if (!userId) throw new Error('User not authenticated for Firestore operations.');
@@ -39,11 +39,36 @@ export const deleteEntryFromFirestore = (entryId: number) => {
   return entryRef.delete();
 };
 
-
-
-
 export const fetchEntriesFromFirestore = async (): Promise<DiaryEntry[]> => {
   const entriesSnapshot = await getEntriesCollection().get();
   return entriesSnapshot.docs.map(doc => doc.data() as DiaryEntry);
 };
 
+// --- FIRESTORE USER PROFILE SYNC ---
+
+/**
+ * Retrieves a user's profile document from Firestore.
+ * @param userId The unique ID of the user.
+ * @returns The user's profile data or null if not found.
+ */
+export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  const userDocRef = db.collection('users').doc(userId);
+  const docSnap = await userDocRef.get();
+
+  if (docSnap.exists) {
+    return docSnap.data() as UserProfile;
+  }
+  return null;
+};
+
+/**
+ * Creates or updates a user's profile document in Firestore.
+ * @param userId The unique ID of the user.
+ * @param data An object containing the profile fields to create or update.
+ */
+export const updateUserProfile = async (userId: string, data: Partial<UserProfile>): Promise<void> => {
+  const userDocRef = db.collection('users').doc(userId);
+  // Using set with merge: true creates the doc if it doesn't exist,
+  // and updates it if it does, without overwriting existing fields.
+  await userDocRef.set(data, { merge: true });
+};

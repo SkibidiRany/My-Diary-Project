@@ -6,6 +6,7 @@ import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navig
 import React from 'react';
 import { COLORS } from '../constants/theme';
 import CalendarScreen from '../screens/CalendarScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
 import NewEntryScreen from '../screens/NewEntryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<RootTabParamList>;
   ViewEntry: { entryId: number };
   NewEntry: { entry?: DiaryEntry };
+  EditProfile: undefined;
 };
 
 /**
@@ -130,6 +132,7 @@ export default function AppNavigator() {
       >
         <RootStack.Screen name="ViewEntry" component={ViewEntryScreen} />
         <RootStack.Screen name="NewEntry" component={NewEntryScreen} />
+        <RootStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
       </RootStack.Group>
     </RootStack.Navigator>
   );
