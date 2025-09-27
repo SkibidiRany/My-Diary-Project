@@ -27,4 +27,14 @@ export interface UserProfile {
   birthdate?: string;
   pronouns?: string;
   bio?: string;
+  encryptionSalt?: string; // Added for encryption
+}
+
+/**
+ * Interface for diary export data
+ */
+export interface DiaryExport {
+  version: string;
+  timestamp: string;
+  entries: DiaryEntry[];
 }

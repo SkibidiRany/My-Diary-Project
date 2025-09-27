@@ -2,6 +2,11 @@
 import { DiaryEntry, UserProfile } from '../types';
 import { auth, db, storage } from './firebase';
 
+// Polyfill Buffer for React Native
+if (typeof global.Buffer === 'undefined') {
+  global.Buffer = require('buffer').Buffer;
+}
+
 // --- IMAGE UPLOAD ---
 export const uploadImageAndGetURL = async (uri: string): Promise<string> => {
   const userId = auth.currentUser?.uid;
@@ -29,6 +34,12 @@ const getEntriesCollection = () => {
 
 export const syncEntryToFirestore = (entry: DiaryEntry) => {
   if (!entry.id) return Promise.reject("Entry requires an ID to be synced.");
+  console.log('☁️ Syncing entry to Firebase:', { 
+    id: entry.id, 
+    title: entry.title?.substring(0, 30) + '...', 
+    content: entry.content?.substring(0, 30) + '...',
+    isEncrypted: entry.title?.includes('encrypted') || entry.content?.includes('encrypted')
+  });
   const entryRef = getEntriesCollection().doc(entry.id.toString());
   // set with merge:true will create the doc if it doesn't exist, or update it if it does.
   return entryRef.set(entry, { merge: true });

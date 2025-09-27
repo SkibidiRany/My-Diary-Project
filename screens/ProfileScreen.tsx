@@ -1,8 +1,11 @@
 // screens/ProfileScreen.tsx
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, Alert, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 import StyledButton from '../components/StyledButton';
 import { COLORS, FONT_SIZES, SPACING } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -31,6 +34,10 @@ export default function ProfileScreen() {
   const authUser = auth.currentUser;
   const entries = useDiaryStore((state) => state.entries);
   const { userProfile, fetchUserProfile, isLoading } = useUserStore();
+  const { exportDiary, importDiary } = useDiaryStore();
+  
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     if (authUser?.uid) {
@@ -43,6 +50,62 @@ export default function ProfileScreen() {
       await signOut();
     } catch (error) {
       Alert.alert("Error", "Could not sign out. Please try again.");
+    }
+  };
+
+  const handleExportDiary = async () => {
+    try {
+      setIsExporting(true);
+      const encryptedData = await exportDiary();
+      
+      // Create filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `diary-backup-${timestamp}.encrypted`;
+      
+      if (Platform.OS === 'web') {
+        // For web, create a download link
+        const blob = new Blob([encryptedData], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        // For mobile, save to file system and share
+        const fileUri = FileSystem.cacheDirectory + filename;
+        await FileSystem.writeAsStringAsync(fileUri, encryptedData);
+        await Sharing.shareAsync(fileUri);
+      }
+      
+      Alert.alert("Success", "Diary exported successfully!");
+    } catch (error) {
+      Alert.alert("Export Failed", "Could not export your diary. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportDiary = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'text/plain',
+        copyToCacheDirectory: true,
+      });
+      
+      if (result.canceled) return;
+      
+      setIsImporting(true);
+      const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
+      await importDiary(fileContent);
+      
+      Alert.alert("Success", "Diary imported successfully!");
+    } catch (error) {
+      Alert.alert("Import Failed", "Could not import your diary. Please make sure the file is a valid encrypted backup.");
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -81,6 +144,22 @@ export default function ProfileScreen() {
           <Text style={styles.statNumber}>{writingStreak}</Text>
           <Text style={styles.statLabel}>Day Streak</Text>
         </View>
+      </View>
+
+      <View style={styles.exportSection}>
+        <Text style={styles.sectionTitle}>Data Management</Text>
+        <StyledButton 
+          title={isExporting ? "Exporting..." : "Export Diary"} 
+          onPress={handleExportDiary} 
+          variant="secondary" 
+          disabled={isExporting}
+        />
+        <StyledButton 
+          title={isImporting ? "Importing..." : "Import Diary"} 
+          onPress={handleImportDiary} 
+          variant="secondary" 
+          disabled={isImporting}
+        />
       </View>
 
       <View style={styles.buttonContainer}>
@@ -171,6 +250,16 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.body,
     color: COLORS.textSecondary,
     marginTop: SPACING.small,
+  },
+  exportSection: {
+    paddingHorizontal: SPACING.medium,
+    paddingBottom: SPACING.large,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZES.subtitle,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.medium,
   },
   buttonContainer: {
     paddingHorizontal: SPACING.medium,

@@ -2,6 +2,11 @@
 import * as SQLite from 'expo-sqlite';
 import { DiaryEntry } from '../types';
 
+// Polyfill Buffer for React Native
+if (typeof global.Buffer === 'undefined') {
+  global.Buffer = require('buffer').Buffer;
+}
+
 // Use the ASYNC method to open the database, which is safe for web
 const dbPromise = SQLite.openDatabaseAsync('diary.db');
 
