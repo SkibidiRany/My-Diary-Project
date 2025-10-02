@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
 
 import AppNavigator from './navigation/AppNavigator';
 import LoginScreen from './screens/LoginScreen';
@@ -10,6 +11,8 @@ import { useDiaryStore } from './store/diaryStore';
 import { useSecurityStore } from './store/securityStore';
 import { useUserStore } from './store/userStore';
 import { COLORS } from './constants/theme';
+
+type User = firebase.User;
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -68,7 +71,7 @@ export default function App() {
       }
     };
 
-    const unsubscribe = onAuthStateChanged(auth, handleUserChange);
+    const unsubscribe = auth.onAuthStateChanged(handleUserChange);
     return unsubscribe;
   }, []);
 

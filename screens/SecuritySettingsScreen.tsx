@@ -7,7 +7,8 @@ import {
   ScrollView, 
   Alert,
   Switch,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -84,24 +85,55 @@ export default function SecuritySettingsScreen() {
   }, [isUnlocked]);
 
   const handleLockUnlockToggle = () => {
+    console.log('🔒 [SecuritySettings] Lock/Unlock button pressed, Platform:', Platform.OS);
+    
     if (isUnlocked) {
-      Alert.alert(
-        'Lock Diary',
-        'Are you sure you want to lock your diary? You will need to enter your master password to access it again.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Lock', 
-            style: 'destructive',
-            onPress: () => {
-              lockDiary();
-              setSecurityStatus(getSecurityStatus());
-              Alert.alert('Diary Locked', 'Your diary has been locked successfully.');
-            }
+      const performLock = () => {
+        console.log('🔒 [SecuritySettings] Performing diary lock...');
+        try {
+          lockDiary();
+          setSecurityStatus(getSecurityStatus());
+          console.log('✅ [SecuritySettings] Diary locked successfully');
+          
+          // Show success message
+          if (Platform.OS === 'web') {
+            window.alert('Your diary has been locked successfully.');
+          } else {
+            Alert.alert('Diary Locked', 'Your diary has been locked successfully.');
           }
-        ]
-      );
+        } catch (error) {
+          console.error('❌ [SecuritySettings] Error locking diary:', error);
+          if (Platform.OS === 'web') {
+            window.alert('Error: Could not lock diary. Please try again.');
+          } else {
+            Alert.alert('Error', 'Could not lock diary. Please try again.');
+          }
+        }
+      };
+
+      if (Platform.OS === 'web') {
+        // Use window.confirm for web
+        const confirmed = window.confirm('Are you sure you want to lock your diary? You will need to enter your master password to access it again.');
+        if (confirmed) {
+          performLock();
+        }
+      } else {
+        // Use React Native Alert for mobile
+        Alert.alert(
+          'Lock Diary',
+          'Are you sure you want to lock your diary? You will need to enter your master password to access it again.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Lock', 
+              style: 'destructive',
+              onPress: performLock
+            }
+          ]
+        );
+      }
     } else {
+      console.log('🔓 [SecuritySettings] Navigating to unlock screen');
       navigation.navigate('UnlockDiary');
     }
   };
@@ -111,22 +143,52 @@ export default function SecuritySettingsScreen() {
   };
 
   const handleClearAuditLog = () => {
-    Alert.alert(
-      'Clear Security Log',
-      'Are you sure you want to clear the security audit log?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear', 
-          style: 'destructive',
-          onPress: () => {
-            clearAuditLog();
-            setAuditLog([]);
-            Alert.alert('Log Cleared', 'Security audit log has been cleared.');
-          }
+    console.log('🗑️ [SecuritySettings] Clear audit log button pressed, Platform:', Platform.OS);
+    
+    const performClear = () => {
+      console.log('🗑️ [SecuritySettings] Clearing audit log...');
+      try {
+        clearAuditLog();
+        setAuditLog([]);
+        console.log('✅ [SecuritySettings] Audit log cleared successfully');
+        
+        // Show success message
+        if (Platform.OS === 'web') {
+          window.alert('Security audit log has been cleared.');
+        } else {
+          Alert.alert('Log Cleared', 'Security audit log has been cleared.');
         }
-      ]
-    );
+      } catch (error) {
+        console.error('❌ [SecuritySettings] Error clearing audit log:', error);
+        if (Platform.OS === 'web') {
+          window.alert('Error: Could not clear audit log. Please try again.');
+        } else {
+          Alert.alert('Error', 'Could not clear audit log. Please try again.');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // Use window.confirm for web
+      const confirmed = window.confirm('Are you sure you want to clear the security audit log?');
+      if (confirmed) {
+        performClear();
+      }
+    } else {
+      // Use React Native Alert for mobile
+      Alert.alert(
+        'Clear Security Log',
+        'Are you sure you want to clear the security audit log?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Clear', 
+            style: 'destructive',
+            onPress: performClear
+          }
+        ]
+      );
+    }
   };
 
   return (

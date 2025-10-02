@@ -6,7 +6,8 @@ import {
   StyleSheet, 
   ScrollView, 
   TouchableOpacity, 
-  Alert 
+  Alert,
+  Platform 
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -72,27 +73,49 @@ export default function SettingsScreen() {
   const navigation = useNavigation<SettingsNavigationProp>();
 
   const handleSignOut = async () => {
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await signOut();
-            } catch (error) {
-              Alert.alert("Error", "Could not sign out. Please try again.");
-            }
-          }
+    console.log('🚪 [SettingsScreen] Sign out button pressed, Platform:', Platform.OS);
+    
+    const performSignOut = async () => {
+      console.log('🚪 [SettingsScreen] Performing sign out...');
+      try {
+        console.log('🚪 [SettingsScreen] Calling signOut function...');
+        await signOut();
+        console.log('🚪 [SettingsScreen] signOut function completed');
+      } catch (error) {
+        console.error('🚪 [SettingsScreen] Error during sign out:', error);
+        if (Platform.OS === 'web') {
+          // Use window.confirm and window.alert on web
+          window.alert("Error: Could not sign out. Please try again.");
+        } else {
+          Alert.alert("Error", "Could not sign out. Please try again.");
         }
-      ]
-    );
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // Use window.confirm for web
+      const confirmed = window.confirm("Are you sure you want to sign out?");
+      if (confirmed) {
+        await performSignOut();
+      }
+    } else {
+      // Use React Native Alert for mobile
+      Alert.alert(
+        "Sign Out",
+        "Are you sure you want to sign out?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel"
+          },
+          {
+            text: "Sign Out",
+            style: "destructive",
+            onPress: performSignOut
+          }
+        ]
+      );
+    }
   };
 
   return (
