@@ -27,7 +27,10 @@ export interface UserProfile {
   birthdate?: string;
   pronouns?: string;
   bio?: string;
-  encryptionSalt?: string; // Added for encryption
+  // Encryption fields
+  hasEncryption?: boolean;
+  encryptionSalt?: string;
+  keyCheck?: string;
 }
 
 /**

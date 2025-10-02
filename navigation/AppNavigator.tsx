@@ -10,7 +10,10 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
 import NewEntryScreen from '../screens/NewEntryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import SetMasterPasswordScreen from '../screens/SetMasterPasswordScreen';
+import UnlockDiaryScreen from '../screens/UnlockDiaryScreen';
 import ViewEntryScreen from '../screens/ViewEntryScreen';
+import DebugScreen from '../screens/DebugScreen';
 import { DiaryEntry } from '../types';
 
 /**
@@ -19,6 +22,9 @@ import { DiaryEntry } from '../types';
  */
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<RootTabParamList>;
+  SetMasterPassword: undefined;
+  UnlockDiary: undefined;
+  Debug: undefined;
   ViewEntry: { entryId: number };
   NewEntry: { entry?: DiaryEntry };
   EditProfile: undefined;
@@ -118,10 +124,44 @@ function MainTabsNavigator() {
  * The root navigator for the entire application.
  * It contains the main tab-based interface and all global modal screens.
  */
-export default function AppNavigator() {
+interface AppNavigatorProps {
+  initialRouteName?: 'SetMasterPassword' | 'UnlockDiary' | 'MainTabs';
+}
+
+export default function AppNavigator({ initialRouteName = 'MainTabs' }: AppNavigatorProps = {}) {
   return (
-    <RootStack.Navigator>
+    <RootStack.Navigator initialRouteName={initialRouteName}>
       <RootStack.Screen name="MainTabs" component={MainTabsNavigator} options={{ headerShown: false }} />
+      <RootStack.Screen 
+        name="SetMasterPassword" 
+        component={SetMasterPasswordScreen} 
+        options={{ 
+          title: 'Set Master Password',
+          headerStyle: { backgroundColor: COLORS.card },
+          headerTitleStyle: { color: COLORS.textPrimary },
+          headerTintColor: COLORS.primary,
+        }} 
+      />
+      <RootStack.Screen 
+        name="UnlockDiary" 
+        component={UnlockDiaryScreen} 
+        options={{ 
+          title: 'Unlock Diary',
+          headerStyle: { backgroundColor: COLORS.card },
+          headerTitleStyle: { color: COLORS.textPrimary },
+          headerTintColor: COLORS.primary,
+        }} 
+      />
+      <RootStack.Screen 
+        name="Debug" 
+        component={DebugScreen} 
+        options={{ 
+          title: 'Debug Security',
+          headerStyle: { backgroundColor: COLORS.card },
+          headerTitleStyle: { color: COLORS.textPrimary },
+          headerTintColor: COLORS.primary,
+        }} 
+      />
       <RootStack.Group
         screenOptions={{
           presentation: 'modal',

@@ -2,14 +2,14 @@
 import { create } from 'zustand';
 import * as db from '../services/database';
 import { deleteEntryFromFirestore, fetchEntriesFromFirestore, syncEntryToFirestore } from '../services/firestoreService';
-import { encryptDiaryEntry, decryptDiaryEntry } from '../utils/encryption';
+import { DiaryEntry } from '../types';
+import { useSecurityStore } from './securityStore';
+import { createEncryptedBackup, restoreFromBackup } from '../utils/encryption';
 
 // Polyfill Buffer for React Native
 if (typeof global.Buffer === 'undefined') {
   global.Buffer = require('buffer').Buffer;
 }
-import { DiaryEntry } from '../types';
-import { useSecurityStore } from './securityStore';
 
 interface DiaryState {
   entries: DiaryEntry[];
@@ -21,8 +21,8 @@ interface DiaryState {
   deleteEntry: (id: number) => Promise<void>;
   clearLocalData: () => Promise<void>;
   syncCloudToLocal: () => Promise<void>;
-  exportDiary: () => Promise<string>;
-  importDiary: (encryptedData: string) => Promise<void>;
+  exportDiary: (masterPassword: string) => Promise<string>;
+  importDiary: (backupData: string, masterPassword: string) => Promise<void>;
 }
 
 export const useDiaryStore = create<DiaryState>((set, get) => ({
@@ -43,18 +43,9 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   fetchEntries: async () => {
     try {
-      const entries = await db.fetchEntries();
-      const { encryptionKey, legacyEncryptionKey, isUnlocked } = useSecurityStore.getState();
-      
-      if (isUnlocked && encryptionKey) {
-        // Decrypt entries for display using smart decryption
-        const decryptedEntries = await Promise.all(
-          entries.map(entry => decryptDiaryEntry(entry, encryptionKey, legacyEncryptionKey || undefined))
-        );
-        set({ entries: decryptedEntries });
-      } else {
-        set({ entries });
-      }
+      const securityState = useSecurityStore.getState();
+      const entries = await db.fetchEntries(securityState.encryptionKey || undefined);
+      set({ entries });
     } catch (error) {
       console.error("Failed to fetch entries:", error);
     }
@@ -67,23 +58,12 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   syncCloudToLocal: async () => {
     try {
-      const cloudEntries = await fetchEntriesFromFirestore();
-      const { encryptionKey, legacyEncryptionKey, isUnlocked } = useSecurityStore.getState();
-      
-      if (isUnlocked && encryptionKey) {
-        // Decrypt cloud entries before storing locally using smart decryption
-        const decryptedEntries = await Promise.all(
-          cloudEntries.map(entry => decryptDiaryEntry(entry, encryptionKey, legacyEncryptionKey || undefined))
-        );
-        for (const entry of decryptedEntries) {
-          await db.upsertEntry(entry);
-        }
-      } else {
-        // Store encrypted entries as-is if not unlocked
-        for (const entry of cloudEntries) {
-          await db.upsertEntry(entry);
-        }
+      const securityState = useSecurityStore.getState();
+      const cloudEntries = await fetchEntriesFromFirestore(securityState.encryptionKey || undefined);
+      for (const entry of cloudEntries) {
+        await db.upsertEntry(entry, securityState.encryptionKey || undefined);
       }
+      await get().fetchEntries();
     } catch (error) {
       console.error("Failed to sync from cloud:", error);
     }
@@ -91,8 +71,12 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   addEntry: async (newEntry) => {
     try {
-      const { encryptionKey, isUnlocked } = useSecurityStore.getState();
-      console.log('🔐 Security state:', { isUnlocked, hasKey: !!encryptionKey, keyLength: encryptionKey?.length });
+      const securityState = useSecurityStore.getState();
+      console.log('🔐 Adding entry with security state:', {
+        isUnlocked: securityState.isUnlocked,
+        hasEncryptionKey: !!securityState.encryptionKey,
+        hasSalt: !!securityState.salt
+      });
       
       const entryToSave: Omit<DiaryEntry, 'id'> = {
         ...newEntry,
@@ -100,24 +84,11 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         modifiedAt: null,
       };
       
-      let finalEntry: DiaryEntry;
-      
-      if (isUnlocked && encryptionKey) {
-        // Encrypt the entry before saving
-        console.log('🔐 Encrypting entry before saving:', { title: entryToSave.title, content: entryToSave.content?.substring(0, 50) + '...' });
-        const encryptedEntry = await encryptDiaryEntry(entryToSave, encryptionKey);
-        console.log('🔐 Encrypted entry:', { title: encryptedEntry.title, content: encryptedEntry.content?.substring(0, 50) + '...' });
-        const newId = await db.addEntry(encryptedEntry);
-        finalEntry = { ...encryptedEntry, id: newId };
-      } else {
-        // Save without encryption if not unlocked
-        console.log('⚠️ Saving entry WITHOUT encryption (not unlocked or no key)');
-        const newId = await db.addEntry(entryToSave);
-        finalEntry = { ...entryToSave, id: newId };
-      }
+      const newId = await db.addEntry(entryToSave, securityState.encryptionKey || undefined);
+      const finalEntry = { ...entryToSave, id: newId };
       
       await get().fetchEntries();
-      await syncEntryToFirestore(finalEntry);
+      await syncEntryToFirestore(finalEntry, securityState.encryptionKey || undefined);
     } catch (error) {
       console.error("Failed to add entry:", error);
     }
@@ -125,25 +96,15 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   updateEntry: async (id, entry) => {
     try {
-      const { encryptionKey, isUnlocked } = useSecurityStore.getState();
-      
+      const securityState = useSecurityStore.getState();
       const entryToUpdate: DiaryEntry = {
         ...entry,
         modifiedAt: new Date().toISOString(),
       };
       
-      let finalEntry: DiaryEntry;
-      
-      if (isUnlocked && encryptionKey) {
-        // Encrypt the entry before saving
-        finalEntry = await encryptDiaryEntry(entryToUpdate, encryptionKey);
-      } else {
-        finalEntry = entryToUpdate;
-      }
-      
-      await db.updateEntry(id, finalEntry);
+      await db.updateEntry(id, entryToUpdate, securityState.encryptionKey || undefined);
       await get().fetchEntries();
-      await syncEntryToFirestore(finalEntry);
+      await syncEntryToFirestore(entryToUpdate, securityState.encryptionKey || undefined);
     } catch (error) {
       console.error("Failed to update entry:", error);
     }
@@ -159,43 +120,56 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     }
   },
 
-  exportDiary: async () => {
+  exportDiary: async (masterPassword: string) => {
     try {
-      const { encryptionKey, isUnlocked } = useSecurityStore.getState();
-      
-      if (!isUnlocked || !encryptionKey) {
+      const securityState = useSecurityStore.getState();
+      if (!securityState.isUnlocked) {
         throw new Error('Diary must be unlocked to export');
       }
       
-      const { encryptDiaryExport } = await import('../utils/encryption');
-      return await encryptDiaryExport(get().entries, encryptionKey);
+      return createEncryptedBackup(get().entries, masterPassword);
     } catch (error) {
       console.error("Failed to export diary:", error);
       throw error;
     }
   },
 
-  importDiary: async (encryptedData) => {
+  importDiary: async (backupData: string, masterPassword: string) => {
     try {
-      const { encryptionKey, isUnlocked } = useSecurityStore.getState();
-      
-      if (!isUnlocked || !encryptionKey) {
+      const securityState = useSecurityStore.getState();
+      if (!securityState.isUnlocked) {
         throw new Error('Diary must be unlocked to import');
       }
       
-      const { decryptDiaryExport } = await import('../utils/encryption');
-      const importedEntries = await decryptDiaryExport(encryptedData, encryptionKey);
+      console.log('🔄 Starting diary import process...');
+      const importedEntries = restoreFromBackup(backupData, masterPassword);
+      console.log(`📥 Restored ${importedEntries.length} entries from backup`);
       
-      // Add imported entries to the database
+      // Add imported entries to both local database and Firebase
       for (const entry of importedEntries) {
         if (entry.id) {
-          await db.upsertEntry(entry);
+          console.log(`🔄 Importing entry ${entry.id}: ${entry.title}`);
+          
+          // Save to local database
+          await db.upsertEntry(entry, securityState.encryptionKey || undefined);
+          console.log(`✅ Entry ${entry.id} saved to local database`);
+          
+          // Sync to Firebase
+          try {
+            await syncEntryToFirestore(entry, securityState.encryptionKey || undefined);
+            console.log(`✅ Entry ${entry.id} synced to Firebase`);
+          } catch (syncError) {
+            console.error(`❌ Failed to sync entry ${entry.id} to Firebase:`, syncError);
+            // Continue with other entries even if one fails to sync
+          }
         }
       }
       
+      // Refresh local entries to reflect the imported data
       await get().fetchEntries();
+      console.log('✅ Import process completed successfully');
     } catch (error) {
-      console.error("Failed to import diary:", error);
+      console.error("❌ Failed to import diary:", error);
       throw error;
     }
   },

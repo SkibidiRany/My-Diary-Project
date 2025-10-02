@@ -1,20 +1,14 @@
-// App.tsx
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-// Polyfill Buffer for React Native
-if (typeof global.Buffer === 'undefined') {
-  global.Buffer = require('buffer').Buffer;
-}
 import AppNavigator from './navigation/AppNavigator';
 import LoginScreen from './screens/LoginScreen';
-import SetMasterPasswordScreen from './screens/SetMasterPasswordScreen';
-import UnlockDiaryScreen from './screens/UnlockDiaryScreen';
 import { auth } from './services/firebase';
 import { useDiaryStore } from './store/diaryStore';
 import { useSecurityStore } from './store/securityStore';
+import { useUserStore } from './store/userStore';
 import { COLORS } from './constants/theme';
 
 export default function App() {
@@ -22,7 +16,8 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   
   const { initialize, isInitialized, syncCloudToLocal } = useDiaryStore();
-  const { isUnlocked, isInitialized: securityInitialized, initializeSecurity, salt } = useSecurityStore();
+  const { initializeSecurity, getSecurityStatus, isUnlocked } = useSecurityStore();
+  const { fetchUserProfile, clearProfile } = useUserStore();
 
   useEffect(() => {
     const handleUserChange = async (currentUser: User | null) => {
@@ -35,16 +30,20 @@ export default function App() {
       
       try {
         if (currentUser) {
-          console.log('🔐 Initializing security for user:', currentUser.uid);
-          // Initialize security first
+          console.log('📱 Initializing user profile...');
+          await fetchUserProfile(currentUser.uid);
+          console.log('🔐 Initializing security...');
           await initializeSecurity(currentUser.uid);
           console.log('📱 Syncing data from cloud...');
-          // Then sync data from cloud
           await syncCloudToLocal();
           console.log('🚀 Initializing app state...');
-          // Finally initialize the app state
           await initialize();
           console.log('✅ App initialization complete');
+        } else {
+          // User signed out, clear all data
+          useDiaryStore.getState().clearLocalData();
+          useSecurityStore.getState().clearSecurityData();
+          clearProfile();
         }
       } catch (error) {
         console.error('❌ Error during initialization:', error);
@@ -59,12 +58,11 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  if (!isAuthReady || (user && !isInitialized) || (user && !securityInitialized)) {
+  if (!isAuthReady || (user && !isInitialized)) {
     console.log('📱 Showing loading screen:', { 
       isAuthReady, 
       hasUser: !!user, 
-      isInitialized, 
-      securityInitialized 
+      isInitialized
     });
     return (
       <View style={styles.loadingContainer}>
@@ -73,9 +71,7 @@ export default function App() {
     );
   }
 
-  // Show login screen if not authenticated
   if (!user) {
-    console.log('📱 Rendering: LoginScreen');
     return (
       <NavigationContainer>
         <LoginScreen />
@@ -83,16 +79,35 @@ export default function App() {
     );
   }
 
-  // Show master password setup if not initialized or no salt
-  if (!securityInitialized || !salt) {
-    console.log('📱 Rendering: SetMasterPasswordScreen', { securityInitialized, hasSalt: !!salt });
-    return <SetMasterPasswordScreen />;
+  // Check security status for authenticated user
+  const securityStatus = getSecurityStatus();
+  
+  if (!securityStatus.isInitialized) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
   }
 
-  // Show unlock screen if locked
+  if (!securityStatus.hasMasterPassword) {
+    // User needs to set up master password
+    console.log('📱 Rendering: Set Master Password');
+    return (
+      <NavigationContainer>
+        <AppNavigator initialRouteName="SetMasterPassword" />
+      </NavigationContainer>
+    );
+  }
+
   if (!isUnlocked) {
-    console.log('📱 Rendering: UnlockDiaryScreen');
-    return <UnlockDiaryScreen />;
+    // User needs to unlock diary
+    console.log('📱 Rendering: Unlock Diary');
+    return (
+      <NavigationContainer>
+        <AppNavigator initialRouteName="UnlockDiary" />
+      </NavigationContainer>
+    );
   }
 
   // Show main app if authenticated and unlocked

@@ -1,127 +1,234 @@
-// store/securityStore.ts
+// store/securityStore.ts - Master Password Security Management
 import { create } from 'zustand';
-import { deriveKeyFromPassword, deriveKeyFromPasswordLegacy, generateSalt } from '../utils/encryption';
+import { User } from 'firebase/auth';
+import { 
+  generateSalt, 
+  deriveKeyFromPassword, 
+  verifyPassword, 
+  createKeyCheck,
+  validateMasterPassword,
+  getSecurityAuditLog,
+  clearSecurityAuditLog
+} from '../utils/encryption';
 import { updateUserProfile, getUserProfile } from '../services/firestoreService';
 
-// Polyfill Buffer for React Native
-if (typeof global.Buffer === 'undefined') {
-  global.Buffer = require('buffer').Buffer;
-}
-
 interface SecurityState {
+  // Master password state
   isUnlocked: boolean;
+  masterPassword: string | null;
   encryptionKey: string | null;
-  legacyEncryptionKey: string | null; // For backward compatibility
   salt: string | null;
+  keyCheck: string | null;
+  
+  // User state
+  currentUserId: string | null;
   isInitialized: boolean;
+  
+  // Actions
   setMasterPassword: (password: string) => Promise<void>;
   unlockDiary: (password: string) => Promise<boolean>;
   lockDiary: () => void;
   initializeSecurity: (userId: string) => Promise<void>;
+  clearSecurityData: () => void;
+  getSecurityStatus: () => {
+    isUnlocked: boolean;
+    hasMasterPassword: boolean;
+    isInitialized: boolean;
+  };
+  getSecurityAuditLog: () => any[];
+  clearAuditLog: () => void;
 }
 
 export const useSecurityStore = create<SecurityState>((set, get) => ({
+  // Initial state
   isUnlocked: false,
+  masterPassword: null,
   encryptionKey: null,
-  legacyEncryptionKey: null,
   salt: null,
+  keyCheck: null,
+  currentUserId: null,
   isInitialized: false,
 
+  /**
+   * Sets up master password for the first time
+   */
   setMasterPassword: async (password: string) => {
     try {
-      console.log('🔐 Setting master password...');
-      const salt = generateSalt();
-      const key = await deriveKeyFromPassword(password, salt);
-      const legacyKey = await deriveKeyFromPasswordLegacy(password, salt);
+      console.log('🔐 Setting up master password...');
       
-      console.log('🔐 Master password set successfully:', { 
-        hasKey: !!key, 
-        hasLegacyKey: !!legacyKey,
-        keyLength: key?.length,
-        saltLength: salt?.length 
-      });
-      
-      set({ 
-        encryptionKey: key, 
-        legacyEncryptionKey: legacyKey,
-        salt, 
-        isUnlocked: true,
-        isInitialized: true 
-      });
-      
-      // Store salt in user profile
-      const auth = require('../services/firebase').auth;
-      const userId = auth.currentUser?.uid;
-      if (userId) {
-        console.log('🔐 Storing salt in user profile:', { userId, saltLength: salt.length });
-        await updateUserProfile(userId, { encryptionSalt: salt });
-        console.log('🔐 Salt stored in user profile successfully');
-      } else {
-        console.error('❌ No user ID available to store salt');
+      // Validate password strength
+      const validation = validateMasterPassword(password);
+      if (!validation.valid) {
+        throw new Error(`Password validation failed: ${validation.errors.join(', ')}`);
       }
+
+      const state = get();
+      if (!state.currentUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Generate salt and derive key
+      const salt = generateSalt();
+      const encryptionKey = deriveKeyFromPassword(password, salt);
+      const keyCheck = createKeyCheck(password, salt);
+
+      // Store encryption metadata in user profile
+      await updateUserProfile(state.currentUserId, {
+        encryptionSalt: salt,
+        keyCheck: keyCheck,
+        hasEncryption: true
+      });
+
+      // Update state
+      set({
+        isUnlocked: true,
+        masterPassword: password,
+        encryptionKey: encryptionKey,
+        salt: salt,
+        keyCheck: keyCheck,
+      });
+
+      console.log('✅ Master password set successfully');
     } catch (error) {
-      console.error('Failed to set master password:', error);
+      console.error('❌ Failed to set master password:', error);
       throw error;
     }
   },
 
-  unlockDiary: async (password: string) => {
+  /**
+   * Unlocks diary with master password
+   */
+  unlockDiary: async (password: string): Promise<boolean> => {
     try {
-      const { salt } = get();
-      console.log('🔓 Attempting to unlock diary:', { hasSalt: !!salt, saltLength: salt?.length });
-      if (!salt) {
-        throw new Error('No salt found. Please set up master password first.');
-      }
+      console.log('🔓 Attempting to unlock diary...');
       
-      const key = await deriveKeyFromPassword(password, salt);
-      const legacyKey = await deriveKeyFromPasswordLegacy(password, salt);
-      console.log('🔓 Unlock successful:', { hasKey: !!key, hasLegacyKey: !!legacyKey, keyLength: key?.length });
-      set({ encryptionKey: key, legacyEncryptionKey: legacyKey, isUnlocked: true });
-      return true;
+      const state = get();
+      if (!state.isInitialized || !state.salt || !state.keyCheck) {
+        console.error('Security not initialized or missing encryption data');
+        return false;
+      }
+
+      // Verify password using key check
+      const isValid = verifyPassword(password, state.salt, state.keyCheck);
+      
+      if (isValid) {
+        // Derive encryption key
+        const encryptionKey = deriveKeyFromPassword(password, state.salt);
+        
+        // Update state
+        set({
+          isUnlocked: true,
+          masterPassword: password,
+          encryptionKey: encryptionKey,
+        });
+        
+        console.log('✅ Diary unlocked successfully');
+        return true;
+      } else {
+        console.log('❌ Invalid master password');
+        set({ isUnlocked: false });
+        return false;
+      }
     } catch (error) {
-      console.error('Failed to unlock diary:', error);
+      console.error('❌ Failed to unlock diary:', error);
+      set({ isUnlocked: false });
       return false;
     }
   },
 
+  /**
+   * Locks the diary and clears sensitive data from memory
+   */
   lockDiary: () => {
-    set({ 
-      isUnlocked: false, 
+    console.log('🔒 Locking diary...');
+    set({
+      isUnlocked: false,
+      masterPassword: null,
       encryptionKey: null,
-      legacyEncryptionKey: null
     });
+    console.log('✅ Diary locked');
   },
 
+
+  /**
+   * Initializes security for a user
+   */
   initializeSecurity: async (userId: string) => {
     try {
-      const { isInitialized } = get();
-      if (isInitialized) {
-        console.log('🔐 Security already initialized, skipping...');
-        return;
-      }
+      console.log(`🔐 Initializing security for user ${userId}...`);
       
-      console.log('🔐 Initializing security for user:', userId);
+      // Get user profile to check for existing encryption data
       const userProfile = await getUserProfile(userId);
-      console.log('🔐 User profile loaded:', { 
-        hasProfile: !!userProfile, 
-        hasEncryptionSalt: !!userProfile?.encryptionSalt,
-        saltLength: userProfile?.encryptionSalt?.length 
+      console.log('👤 User profile:', { 
+        hasEncryption: userProfile?.hasEncryption, 
+        hasSalt: !!userProfile?.encryptionSalt, 
+        hasKeyCheck: !!userProfile?.keyCheck 
       });
       
-      if (userProfile?.encryptionSalt) {
-        console.log('🔐 Security initialized with existing salt');
-        set({ 
+      if (userProfile?.hasEncryption && userProfile.encryptionSalt && userProfile.keyCheck) {
+        // User has encryption set up
+        set({
+          currentUserId: userId,
+          isInitialized: true,
           salt: userProfile.encryptionSalt,
-          isInitialized: true 
+          keyCheck: userProfile.keyCheck,
         });
+        console.log('✅ Security initialized - encryption enabled');
       } else {
-        console.log('🔐 No encryption salt found - user needs to set master password');
-        // Security is initialized but user needs to set master password
-        set({ isInitialized: true });
+        // User doesn't have encryption set up yet
+        set({
+          currentUserId: userId,
+          isInitialized: true,
+        });
+        console.log('✅ Security initialized - no encryption yet');
       }
     } catch (error) {
-      console.error('Failed to initialize security:', error);
-      set({ isInitialized: true });
+      console.error('❌ Failed to initialize security:', error);
+      throw error;
     }
   },
+
+  /**
+   * Clears all security data
+   */
+  clearSecurityData: () => {
+    console.log('🗑️ Clearing security data...');
+    set({
+      isUnlocked: false,
+      masterPassword: null,
+      encryptionKey: null,
+      salt: null,
+      keyCheck: null,
+      currentUserId: null,
+      isInitialized: false,
+    });
+    console.log('✅ Security data cleared');
+  },
+
+  /**
+   * Gets current security status
+   */
+  getSecurityStatus: () => {
+    const state = get();
+    return {
+      isUnlocked: state.isUnlocked,
+      hasMasterPassword: !!state.salt && !!state.keyCheck,
+      isInitialized: state.isInitialized,
+    };
+  },
+
+  /**
+   * Gets security audit log
+   */
+  getSecurityAuditLog: () => {
+    return getSecurityAuditLog();
+  },
+
+  /**
+   * Clears security audit log
+   */
+  clearAuditLog: () => {
+    clearSecurityAuditLog();
+  },
+
 }));

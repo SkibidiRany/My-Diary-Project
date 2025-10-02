@@ -1,6 +1,7 @@
 // services/firestoreService.ts
 import { DiaryEntry, UserProfile } from '../types';
 import { auth, db, storage } from './firebase';
+import { encryptString, decryptString, encryptDiaryEntry, decryptDiaryEntry } from '../utils/encryption';
 
 // Polyfill Buffer for React Native
 if (typeof global.Buffer === 'undefined') {
@@ -32,17 +33,31 @@ const getEntriesCollection = () => {
   return db.collection('users').doc(userId).collection('entries');
 };
 
-export const syncEntryToFirestore = (entry: DiaryEntry) => {
+export const syncEntryToFirestore = async (entry: DiaryEntry, encryptionKey?: string) => {
   if (!entry.id) return Promise.reject("Entry requires an ID to be synced.");
-  console.log('☁️ Syncing entry to Firebase:', { 
-    id: entry.id, 
-    title: entry.title?.substring(0, 30) + '...', 
-    content: entry.content?.substring(0, 30) + '...',
-    isEncrypted: entry.title?.includes('encrypted') || entry.content?.includes('encrypted')
-  });
-  const entryRef = getEntriesCollection().doc(entry.id.toString());
-  // set with merge:true will create the doc if it doesn't exist, or update it if it does.
-  return entryRef.set(entry, { merge: true });
+  
+  try {
+    let entryToSync = entry;
+    
+    // Encrypt the entry if encryption key is provided
+    if (encryptionKey) {
+      entryToSync = encryptDiaryEntry(entry, encryptionKey);
+    }
+    
+    console.log('☁️ Syncing entry to Firebase:', { 
+      id: entry.id, 
+      title: entryToSync.title?.substring(0, 30) + '...', 
+      content: entryToSync.content?.substring(0, 30) + '...',
+      isEncrypted: !!encryptionKey
+    });
+    
+    const entryRef = getEntriesCollection().doc(entry.id.toString());
+    // set with merge:true will create the doc if it doesn't exist, or update it if it does.
+    return entryRef.set(entryToSync, { merge: true });
+  } catch (error) {
+    console.error('Failed to sync entry to Firestore:', error);
+    throw error;
+  }
 };
 
 export const deleteEntryFromFirestore = (entryId: number) => {
@@ -50,9 +65,30 @@ export const deleteEntryFromFirestore = (entryId: number) => {
   return entryRef.delete();
 };
 
-export const fetchEntriesFromFirestore = async (): Promise<DiaryEntry[]> => {
+export const fetchEntriesFromFirestore = async (encryptionKey?: string): Promise<DiaryEntry[]> => {
   const entriesSnapshot = await getEntriesCollection().get();
-  return entriesSnapshot.docs.map(doc => doc.data() as DiaryEntry);
+  const entries = entriesSnapshot.docs.map(doc => doc.data() as DiaryEntry);
+  
+  // Decrypt entries if encryption key is provided
+  if (encryptionKey) {
+    const decryptedEntries: DiaryEntry[] = [];
+    
+    for (const entry of entries) {
+      try {
+        const decryptedEntry = decryptDiaryEntry(entry, encryptionKey);
+        decryptedEntries.push(decryptedEntry);
+      } catch (error) {
+        console.error(`Failed to decrypt entry ${entry.id} from Firestore:`, error);
+        // If decryption fails, try to return the entry as-is (might be plaintext)
+        decryptedEntries.push(entry);
+      }
+    }
+    
+    return decryptedEntries;
+  } else {
+    // Return entries as-is if no encryption key provided
+    return entries;
+  }
 };
 
 // --- FIRESTORE USER PROFILE SYNC ---

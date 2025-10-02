@@ -53,7 +53,11 @@ export default {
         "backgroundColor": "#ffffff"
       },
       "package": "com.rany.mydiaryapp",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

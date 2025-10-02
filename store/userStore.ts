@@ -8,6 +8,7 @@ interface UserState {
   isLoading: boolean;
   fetchUserProfile: (userId: string) => Promise<void>;
   updateUserProfile: (userId: string, data: Partial<UserProfile>) => Promise<void>;
+  clearProfile: () => void;
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -44,5 +45,12 @@ export const useUserStore = create<UserState>((set, get) => ({
     } catch (error) {
       console.error("Error updating user profile:", error);
     }
+  },
+
+  /**
+   * Clears the user profile from the state.
+   */
+  clearProfile: () => {
+    set({ userProfile: null, isLoading: false });
   },
 }));
