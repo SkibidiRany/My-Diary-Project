@@ -17,6 +17,7 @@ import DebugScreen from '../screens/DebugScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ExportImportScreen from '../screens/ExportImportScreen';
 import SecuritySettingsScreen from '../screens/SecuritySettingsScreen';
+import FirstTimeProfileSetupScreen from '../screens/FirstTimeProfileSetupScreen';
 import { DiaryEntry } from '../types';
 
 /**
@@ -25,6 +26,7 @@ import { DiaryEntry } from '../types';
  */
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<RootTabParamList>;
+  FirstTimeProfileSetup: undefined;
   SetMasterPassword: undefined;
   UnlockDiary: undefined;
   Debug: undefined;
@@ -168,13 +170,24 @@ function MainTabsNavigator() {
  * It contains the main tab-based interface and all global modal screens.
  */
 interface AppNavigatorProps {
-  initialRouteName?: 'SetMasterPassword' | 'UnlockDiary' | 'MainTabs';
+  initialRouteName?: 'FirstTimeProfileSetup' | 'SetMasterPassword' | 'UnlockDiary' | 'MainTabs';
 }
 
 export default function AppNavigator({ initialRouteName = 'MainTabs' }: AppNavigatorProps = {}) {
   return (
     <RootStack.Navigator initialRouteName={initialRouteName}>
       <RootStack.Screen name="MainTabs" component={MainTabsNavigator} options={{ headerShown: false }} />
+      <RootStack.Screen 
+        name="FirstTimeProfileSetup" 
+        component={FirstTimeProfileSetupScreen} 
+        options={{ 
+          title: 'Profile Setup',
+          headerStyle: { backgroundColor: COLORS.card },
+          headerTitleStyle: { color: COLORS.textPrimary },
+          headerTintColor: COLORS.primary,
+          headerBackVisible: false, // Prevent going back during setup
+        }} 
+      />
       <RootStack.Screen 
         name="SetMasterPassword" 
         component={SetMasterPasswordScreen} 

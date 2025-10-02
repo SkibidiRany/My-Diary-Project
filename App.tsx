@@ -14,10 +14,11 @@ import { COLORS } from './constants/theme';
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
   
   const { initialize, isInitialized, syncCloudToLocal } = useDiaryStore();
   const { initializeSecurity, getSecurityStatus, isUnlocked } = useSecurityStore();
-  const { fetchUserProfile, clearProfile } = useUserStore();
+  const { fetchUserProfile, clearProfile, userProfile } = useUserStore();
 
   useEffect(() => {
     const handleUserChange = async (currentUser: User | null) => {
@@ -32,18 +33,31 @@ export default function App() {
         if (currentUser) {
           console.log('📱 Initializing user profile...');
           await fetchUserProfile(currentUser.uid);
-          console.log('🔐 Initializing security...');
-          await initializeSecurity(currentUser.uid);
-          console.log('📱 Syncing data from cloud...');
-          await syncCloudToLocal();
-          console.log('🚀 Initializing app state...');
-          await initialize();
-          console.log('✅ App initialization complete');
+          
+          // Check if this is a first-time user (no profile exists)
+          const currentProfile = useUserStore.getState().userProfile;
+          const isFirstTimeUser = !currentProfile;
+          
+          setIsProfileLoaded(true); // Mark profile loading as complete
+          
+          if (isFirstTimeUser) {
+            console.log('🆕 First-time user detected - profile setup required');
+            // Don't initialize security or sync data yet - wait for profile setup
+          } else {
+            console.log('🔐 Initializing security...');
+            await initializeSecurity(currentUser.uid);
+            console.log('📱 Syncing data from cloud...');
+            await syncCloudToLocal();
+            console.log('🚀 Initializing app state...');
+            await initialize();
+            console.log('✅ App initialization complete');
+          }
         } else {
           // User signed out, clear all data
           useDiaryStore.getState().clearLocalData();
           useSecurityStore.getState().clearSecurityData();
           clearProfile();
+          setIsProfileLoaded(false); // Reset profile loaded state
         }
       } catch (error) {
         console.error('❌ Error during initialization:', error);
@@ -58,12 +72,30 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  if (!isAuthReady || (user && !isInitialized)) {
-    console.log('📱 Showing loading screen:', { 
-      isAuthReady, 
-      hasUser: !!user, 
-      isInitialized
-    });
+  // Handle profile setup completion for first-time users
+  useEffect(() => {
+    const handleProfileSetupCompletion = async () => {
+      if (user && userProfile && !isInitialized) {
+        console.log('🔄 Profile setup completed, continuing initialization...');
+        try {
+          console.log('🔐 Initializing security...');
+          await initializeSecurity(user.uid);
+          console.log('📱 Syncing data from cloud...');
+          await syncCloudToLocal();
+          console.log('🚀 Initializing app state...');
+          await initialize();
+          console.log('✅ App initialization complete after profile setup');
+        } catch (error) {
+          console.error('❌ Error during post-profile-setup initialization:', error);
+        }
+      }
+    };
+
+    handleProfileSetupCompletion();
+  }, [userProfile, user, isInitialized]);
+
+  if (!isAuthReady) {
+    console.log('📱 Showing loading screen: Auth not ready');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -76,6 +108,36 @@ export default function App() {
       <NavigationContainer>
         <LoginScreen />
       </NavigationContainer>
+    );
+  }
+
+  // Show loading while profile is being fetched
+  if (!isProfileLoaded) {
+    console.log('📱 Showing loading screen: Profile loading');
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  // Check if user needs profile setup (first-time user)
+  if (!userProfile) {
+    console.log('📱 Rendering: First Time Profile Setup');
+    return (
+      <NavigationContainer>
+        <AppNavigator initialRouteName="FirstTimeProfileSetup" />
+      </NavigationContainer>
+    );
+  }
+
+  // Show loading if still initializing after profile setup
+  if (!isInitialized) {
+    console.log('📱 Showing loading screen: App initializing after profile setup');
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
     );
   }
 
