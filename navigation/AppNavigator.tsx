@@ -9,11 +9,14 @@ import CalendarScreen from '../screens/CalendarScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
 import NewEntryScreen from '../screens/NewEntryScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import ProfileScreen from '../screens/ProfileScreen_Fallback';
 import SetMasterPasswordScreen from '../screens/SetMasterPasswordScreen';
 import UnlockDiaryScreen from '../screens/UnlockDiaryScreen';
 import ViewEntryScreen from '../screens/ViewEntryScreen';
 import DebugScreen from '../screens/DebugScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import ExportImportScreen from '../screens/ExportImportScreen';
+import SecuritySettingsScreen from '../screens/SecuritySettingsScreen';
 import { DiaryEntry } from '../types';
 
 /**
@@ -28,6 +31,16 @@ export type RootStackParamList = {
   ViewEntry: { entryId: number };
   NewEntry: { entry?: DiaryEntry };
   EditProfile: undefined;
+  Settings: NavigatorScreenParams<SettingsStackParamList>;
+};
+
+/**
+ * Defines the parameters for the settings stack navigator.
+ */
+export type SettingsStackParamList = {
+  SettingsHome: undefined;
+  ExportImport: undefined;
+  SecuritySettings: undefined;
 };
 
 /**
@@ -58,6 +71,7 @@ export type HomeScreenProps = CompositeScreenProps<
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const DiaryStack = createNativeStackNavigator<DiaryStackParamList>();
+const SettingsStack = createNativeStackNavigator<SettingsStackParamList>();
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 /**
@@ -74,6 +88,37 @@ function DiaryStackNavigator() {
     >
       <DiaryStack.Screen name="Home" component={HomeScreen} options={{ title: 'My Diary' }} />
     </DiaryStack.Navigator>
+  );
+}
+
+/**
+ * A stack navigator for settings-related screens.
+ */
+function SettingsStackNavigator() {
+  return (
+    <SettingsStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.card },
+        headerTitleStyle: { color: COLORS.textPrimary },
+        headerTintColor: COLORS.primary,
+      }}
+    >
+      <SettingsStack.Screen 
+        name="SettingsHome" 
+        component={SettingsScreen} 
+        options={{ title: 'Settings' }} 
+      />
+      <SettingsStack.Screen 
+        name="ExportImport" 
+        component={ExportImportScreen} 
+        options={{ title: 'Export & Import' }} 
+      />
+      <SettingsStack.Screen 
+        name="SecuritySettings" 
+        component={SecuritySettingsScreen} 
+        options={{ title: 'Security Settings' }} 
+      />
+    </SettingsStack.Navigator>
   );
 }
 
@@ -111,9 +156,7 @@ function MainTabsNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          headerShown: true,
-          headerStyle: { backgroundColor: COLORS.card },
-          headerTitleStyle: { color: COLORS.textPrimary },
+          headerShown: false,
         }}
       />
     </Tab.Navigator>
@@ -173,6 +216,7 @@ export default function AppNavigator({ initialRouteName = 'MainTabs' }: AppNavig
         <RootStack.Screen name="ViewEntry" component={ViewEntryScreen} />
         <RootStack.Screen name="NewEntry" component={NewEntryScreen} />
         <RootStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
+        <RootStack.Screen name="Settings" component={SettingsStackNavigator} options={{ headerShown: false }} />
       </RootStack.Group>
     </RootStack.Navigator>
   );
