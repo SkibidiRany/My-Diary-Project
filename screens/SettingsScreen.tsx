@@ -128,6 +128,12 @@ export default function SettingsScreen() {
           icon="download"
           onPress={() => navigation.navigate('ExportImport')}
         />
+        <SettingsItem
+          title="Manage Categories"
+          subtitle="Organize your diary entries"
+          icon="tag"
+          onPress={() => navigation.navigate('CategoryManagement')}
+        />
       </View>
 
       <SectionHeader title="Security & Privacy" />

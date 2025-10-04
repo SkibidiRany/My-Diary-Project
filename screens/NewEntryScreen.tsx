@@ -4,10 +4,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ActivityIndicator, Image, Keyboard, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, Platform, KeyboardAvoidingView, ScrollView, TextInput } from 'react-native';
 import StyledButton from '../components/StyledButton';
 import StyledTextInput from '../components/StyledTextInput';
+import CategoryPicker from '../components/CategoryPicker';
 import { COLORS } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { uploadImageAndGetURL } from '../services/firestoreService';
 import { useDiaryStore } from '../store/diaryStore';
+import { useCategoryStore } from '../store/categoryStore';
 import { showSuccessAlert, showErrorAlert, showConfirmAlert } from '../utils/alerts';
 
 type NewEntryScreenProps = NativeStackScreenProps<RootStackParamList, 'NewEntry'>;
@@ -25,6 +27,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
   const [imageUri, setImageUri] = useState<string | null>(currentEntry?.imageUri || null);
   const [emoji, setEmoji] = useState<string | null>(currentEntry?.emoji || null);
   const [tempEmoji, setTempEmoji] = useState(currentEntry?.emoji || '');
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(currentEntry?.categoryIds || []);
   const [isModalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [createdFor, setCreatedFor] = useState<Date>(
@@ -76,6 +79,11 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { addEntry, updateEntry } = useDiaryStore();
+  const { initialize: initializeCategories } = useCategoryStore();
+
+  useEffect(() => {
+    initializeCategories();
+  }, []);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: currentEntry ? 'Edit Entry' : 'New Entry' });
@@ -91,6 +99,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
       setImageUri(currentEntry.imageUri || null);
       setEmoji(currentEntry.emoji || null);
       setTempEmoji(currentEntry.emoji || '');
+      setSelectedCategoryIds(currentEntry.categoryIds || []);
       
       // Update date fields
       if (currentEntry.createdFor) {
@@ -302,6 +311,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
       imageUri: finalImageUri, 
       isPrivate: false,
       createdFor: finalDate.toISOString(),
+      categoryIds: selectedCategoryIds,
     };
     try {
       if (currentEntry) {
@@ -416,6 +426,15 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
 
             {/* Samsung Notes Style Content Area */}
             <View style={styles.contentArea}>
+              {/* Category Selection - Above Title */}
+              <CategoryPicker
+                selectedCategoryIds={selectedCategoryIds}
+                onSelectionChange={setSelectedCategoryIds}
+                multiSelect={true}
+                placeholder="Select categories..."
+                style={styles.categoryPicker}
+              />
+              
               <TextInput
                 style={styles.titleInput}
                 value={title}
@@ -425,6 +444,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
                 multiline={false}
                 onFocus={scrollToContent}
               />
+              
               <TextInput
                 ref={contentRef}
                 style={styles.contentInput}
@@ -617,6 +637,9 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     marginBottom: 8,
     minHeight: 40,
+  },
+  categoryPicker: {
+    marginBottom: 8,
   },
   contentInput: { 
     fontSize: 16,

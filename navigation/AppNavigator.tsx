@@ -18,6 +18,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ExportImportScreen from '../screens/ExportImportScreen';
 import SecuritySettingsScreen from '../screens/SecuritySettingsScreen';
 import FirstTimeProfileSetupScreen from '../screens/FirstTimeProfileSetupScreen';
+import CategoryManagementScreen from '../screens/CategoryManagementScreen';
 import { DiaryEntry } from '../types';
 
 /**
@@ -43,6 +44,7 @@ export type SettingsStackParamList = {
   SettingsHome: undefined;
   ExportImport: undefined;
   SecuritySettings: undefined;
+  CategoryManagement: undefined;
 };
 
 /**
@@ -119,6 +121,11 @@ function SettingsStackNavigator() {
         name="SecuritySettings" 
         component={SecuritySettingsScreen} 
         options={{ title: 'Security Settings' }} 
+      />
+      <SettingsStack.Screen 
+        name="CategoryManagement" 
+        component={CategoryManagementScreen} 
+        options={{ title: 'Manage Categories' }} 
       />
     </SettingsStack.Navigator>
   );

@@ -44,7 +44,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   fetchEntries: async () => {
     try {
       const securityState = useSecurityStore.getState();
-      const entries = await db.fetchEntries(securityState.encryptionKey || undefined);
+      const entries = await db.getEntriesWithCategories(securityState.encryptionKey || undefined);
       set({ entries });
     } catch (error) {
       console.error("Failed to fetch entries:", error);
@@ -78,8 +78,9 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         hasSalt: !!securityState.salt
       });
       
+      const { categoryIds, ...entryData } = newEntry;
       const entryToSave: Omit<DiaryEntry, 'id'> = {
-        ...newEntry,
+        ...entryData,
         createdAt: new Date().toISOString(),
         createdFor: newEntry.createdFor || new Date().toISOString(),
         modifiedAt: null,
@@ -87,6 +88,12 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       
       const newId = await db.addEntry(entryToSave, securityState.encryptionKey || undefined);
       const finalEntry = { ...entryToSave, id: newId };
+      
+      // Handle category assignments
+      if (categoryIds && categoryIds.length > 0) {
+        await db.setEntryCategories(newId, categoryIds);
+        finalEntry.categoryIds = categoryIds;
+      }
       
       await get().fetchEntries();
       await syncEntryToFirestore(finalEntry, securityState.encryptionKey || undefined);
@@ -98,12 +105,20 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   updateEntry: async (id, entry) => {
     try {
       const securityState = useSecurityStore.getState();
+      const { categoryIds, ...entryData } = entry;
       const entryToUpdate: DiaryEntry = {
-        ...entry,
+        ...entryData,
         modifiedAt: new Date().toISOString(),
       };
       
       await db.updateEntry(id, entryToUpdate, securityState.encryptionKey || undefined);
+      
+      // Handle category assignments
+      if (categoryIds !== undefined) {
+        await db.setEntryCategories(id, categoryIds);
+        entryToUpdate.categoryIds = categoryIds;
+      }
+      
       await get().fetchEntries();
       await syncEntryToFirestore(entryToUpdate, securityState.encryptionKey || undefined);
     } catch (error) {
