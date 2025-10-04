@@ -9,7 +9,7 @@ interface DiaryCardProps {
 
 export default function DiaryCard({ entry }: DiaryCardProps) {
   const [modalVisible, setModalVisible] = useState(false);
-  const displayDate = new Date(entry.createdAt).toLocaleDateString();
+  const displayDate = new Date(entry.createdFor).toLocaleDateString();
 
   return (
     <View style={styles.card}>

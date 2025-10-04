@@ -316,6 +316,7 @@ export function encryptDiaryEntry(entry: DiaryEntry, keyHex: string): DiaryEntry
       emoji: entry.emoji ? encryptString(entry.emoji, keyHex) : null,
       imageUri: entry.imageUri ? encryptString(entry.imageUri, keyHex) : null,
       createdAt: encryptString(entry.createdAt, keyHex),
+      createdFor: encryptString(entry.createdFor, keyHex),
       modifiedAt: entry.modifiedAt ? encryptString(entry.modifiedAt, keyHex) : null,
       isPrivate: entry.isPrivate,
     };
@@ -349,6 +350,7 @@ export function decryptDiaryEntry(entry: DiaryEntry, keyHex: string): DiaryEntry
       emoji: entry.emoji ? decryptString(entry.emoji, keyHex) : null,
       imageUri: entry.imageUri ? decryptString(entry.imageUri, keyHex) : null,
       createdAt: decryptString(entry.createdAt, keyHex),
+      createdFor: decryptString(entry.createdFor, keyHex),
       modifiedAt: entry.modifiedAt ? decryptString(entry.modifiedAt, keyHex) : null,
       isPrivate: entry.isPrivate,
     };

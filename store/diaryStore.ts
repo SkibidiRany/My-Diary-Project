@@ -16,7 +16,7 @@ interface DiaryState {
   isInitialized: boolean;
   initialize: () => Promise<void>;
   fetchEntries: () => Promise<void>;
-  addEntry: (newEntry: Omit<DiaryEntry, 'id' | 'createdAt' | 'modifiedAt'>) => Promise<void>;
+  addEntry: (newEntry: Omit<DiaryEntry, 'id' | 'createdAt' | 'createdFor' | 'modifiedAt'>) => Promise<void>;
   updateEntry: (id: number, entry: DiaryEntry) => Promise<void>;
   deleteEntry: (id: number) => Promise<void>;
   clearLocalData: () => Promise<void>;
@@ -81,6 +81,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       const entryToSave: Omit<DiaryEntry, 'id'> = {
         ...newEntry,
         createdAt: new Date().toISOString(),
+        createdFor: newEntry.createdFor || new Date().toISOString(),
         modifiedAt: null,
       };
       

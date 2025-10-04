@@ -13,6 +13,7 @@
     "@noble/ciphers": "^2.0.1",
     "@noble/hashes": "^2.0.1",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "^8.4.5",
     "@react-native-google-signin/google-signin": "^16.0.0",
     "@react-navigation/bottom-tabs": "^7.4.7",
     "@react-navigation/native": "^7.1.17",

@@ -22,7 +22,7 @@ export default function CalendarScreen() {
   useEffect(() => {
     if (isFocused && selectedDate !== '') {
       const entriesOnDay = entries.filter(
-        (entry) => entry.createdAt.split('T')[0] === selectedDate
+        (entry) => (entry.createdFor || entry.createdAt).split('T')[0] === selectedDate
       );
       if (entriesOnDay.length > 0) {
         setModalVisible(true);
@@ -35,7 +35,7 @@ export default function CalendarScreen() {
   const markedDates = useMemo(() => {
     const marks: { [key: string]: { marked: true; dotColor: string } } = {};
     entries.forEach((entry) => {
-      const dateString = entry.createdAt.split('T')[0];
+      const dateString = (entry.createdFor || entry.createdAt).split('T')[0];
       marks[dateString] = { marked: true, dotColor: COLORS.primary };
     });
     return marks;
@@ -43,8 +43,8 @@ export default function CalendarScreen() {
 
   const entriesForSelectedDay = useMemo(() => {
     return entries
-      .filter((entry) => entry.createdAt.split('T')[0] === selectedDate)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      .filter((entry) => (entry.createdFor || entry.createdAt).split('T')[0] === selectedDate)
+      .sort((a, b) => new Date(a.createdFor || a.createdAt).getTime() - new Date(b.createdFor || b.createdAt).getTime());
   }, [entries, selectedDate]);
 
   const onDayPress = (day: DateData) => {

@@ -11,6 +11,7 @@ export interface DiaryEntry {
   emoji: string | null;
   imageUri: string | null;
   createdAt: string;
+  createdFor: string; // The date this entry was written for (not when it was created)
   modifiedAt?: string | null; 
   isPrivate: boolean;
 }

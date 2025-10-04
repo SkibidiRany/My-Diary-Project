@@ -1,10 +1,11 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import StyledButton from '../components/StyledButton';
 import { COLORS } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useDiaryStore } from '../store/diaryStore';
+import { showErrorAlert, showConfirmAlert } from '../utils/alerts';
 
 type ViewScreenProps = NativeStackScreenProps<RootStackParamList, 'ViewEntry'>;
 
@@ -32,16 +33,15 @@ export default function ViewEntryScreen({ route, navigation }: ViewScreenProps) 
         await deleteEntry(entryId);
         navigation.goBack();
       } catch (error) {
-        Alert.alert("Error", "Could not delete the entry.");
+        showErrorAlert("Could not delete the entry.");
       }
     };
-    if (Platform.OS === 'web') {
-      if (window.confirm("Are you sure you want to permanently delete this diary entry?")) {
-        deleteAction();
-      }
-    } else {
-      Alert.alert("Delete Entry", "Are you sure you want to permanently delete this diary entry?", [{ text: "Cancel" }, { text: "Delete", style: "destructive", onPress: deleteAction }]);
-    }
+    
+    showConfirmAlert(
+      "Delete Entry", 
+      "Are you sure you want to permanently delete this diary entry?", 
+      deleteAction
+    );
   };
 
   const handleEdit = () => {
@@ -53,6 +53,11 @@ export default function ViewEntryScreen({ route, navigation }: ViewScreenProps) 
   };
 
   const createdDate = new Date(entry.createdAt).toLocaleString([], dateOptions);
+  const createdForDate = new Date(entry.createdFor).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
   const modifiedDate = entry.modifiedAt ? new Date(entry.modifiedAt).toLocaleString([], dateOptions) : null;
 
   return (
@@ -92,6 +97,7 @@ export default function ViewEntryScreen({ route, navigation }: ViewScreenProps) 
           <Text style={styles.title}>{entry.title}</Text>
         </View>
         <View style={styles.timestampContainer}>
+          <Text style={styles.date}>Written for: {createdForDate}</Text>
           <Text style={styles.date}>Created: {createdDate}</Text>
           {modifiedDate && <Text style={styles.date}>Last Modified: {modifiedDate}</Text>}
         </View>

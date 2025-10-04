@@ -5,7 +5,6 @@ import {
   Text, 
   StyleSheet, 
   ScrollView, 
-  Alert, 
   Platform,
   Modal,
   TextInput,
@@ -17,6 +16,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import StyledButton from '../components/StyledButton';
 import { COLORS, FONT_SIZES, SPACING } from '../constants/theme';
 import { useDiaryStore } from '../store/diaryStore';
+import { showSuccessAlert, showErrorAlert, showConfirmAlert } from '../utils/alerts';
 
 const InfoCard = ({ 
   title, 
@@ -55,7 +55,7 @@ export default function ExportImportScreen() {
 
   const handleExportConfirm = async () => {
     if (!exportPassword || exportPassword.trim() === '') {
-      Alert.alert('Error', 'Password is required for export');
+      showErrorAlert('Password is required for export');
       return;
     }
     
@@ -79,7 +79,7 @@ export default function ExportImportScreen() {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         
-        Alert.alert("Export Complete", `Backup file "${filename}" has been downloaded.`);
+        showSuccessAlert(`Backup file "${filename}" has been downloaded.`);
       } else {
         // Mobile version - save to file system
         const fileUri = FileSystem.documentDirectory + filename;
@@ -94,22 +94,22 @@ export default function ExportImportScreen() {
             if (permissions.granted) {
               const downloadUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, filename, 'text/plain');
               await FileSystem.writeAsStringAsync(downloadUri, encryptedData);
-              Alert.alert("Export Complete", `Backup saved to Downloads folder as: ${filename}`);
+              showSuccessAlert(`Backup saved to Downloads folder as: ${filename}`);
             } else {
-              Alert.alert("Export Complete", `Backup saved to app directory as: ${filename}`);
+              showSuccessAlert(`Backup saved to app directory as: ${filename}`);
             }
           } catch (error) {
-            Alert.alert("Export Complete", `Backup saved to app directory as: ${filename}`);
+            showSuccessAlert(`Backup saved to app directory as: ${filename}`);
           }
         } else {
-          Alert.alert("Export Complete", `Backup saved as: ${filename}\n\nYou can find it in the Files app.`);
+          showSuccessAlert(`Backup saved as: ${filename}\n\nYou can find it in the Files app.`);
         }
       }
       
-      Alert.alert("Success", "Encrypted diary backup created successfully!");
+      showSuccessAlert("Encrypted diary backup created successfully!");
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert("Export Failed", `Could not export your diary. Error: ${error}`);
+      showErrorAlert(`Could not export your diary. Error: ${error}`);
     } finally {
       setIsExporting(false);
       setExportPassword('');
@@ -164,13 +164,13 @@ export default function ExportImportScreen() {
       
     } catch (error) {
       console.error('Import setup error:', error);
-      Alert.alert("Import Failed", "Could not select or read file. Please try again.");
+      showErrorAlert("Could not select or read file. Please try again.");
     }
   };
 
   const handleImportConfirm = async () => {
     if (!importPassword || importPassword.trim() === '') {
-      Alert.alert('Error', 'Password is required for import');
+      showErrorAlert('Password is required for import');
       return;
     }
     
@@ -178,18 +178,13 @@ export default function ExportImportScreen() {
       setIsImporting(true);
       setShowImportModal(false);
       
-      Alert.alert(
-        "Importing...", 
-        "Please wait while we import and sync your diary entries.",
-        [],
-        { cancelable: false }
-      );
+      showSuccessAlert("Please wait while we import and sync your diary entries.");
       
       await importDiary(importFileContent, importPassword);
-      Alert.alert("Success", "Diary imported and synced successfully!");
+      showSuccessAlert("Diary imported and synced successfully!");
     } catch (error) {
       console.error('Import error:', error);
-      Alert.alert("Import Failed", "Could not import your diary. Please check your password and file.");
+      showErrorAlert("Could not import your diary. Please check your password and file.");
     } finally {
       setIsImporting(false);
       setImportPassword('');
