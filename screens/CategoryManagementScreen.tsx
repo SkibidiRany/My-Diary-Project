@@ -18,6 +18,7 @@ import { Category } from '../types';
 import CategoryChip from '../components/CategoryChip';
 import StyledButton from '../components/StyledButton';
 import StyledTextInput from '../components/StyledTextInput';
+import EmojiPicker from '../components/EmojiPicker';
 import { COLORS, FONT_SIZES, SPACING } from '../constants/theme';
 import { showSuccessAlert, showErrorAlert, showConfirmAlert } from '../utils/alerts';
 
@@ -28,8 +29,8 @@ const PREDEFINED_COLORS = [
 ];
 
 const PREDEFINED_ICONS = [
-  '👤', '💼', '✈️', '🏥', '💡', '❤️', '🎯', '📚', '🎨', '🏠',
-  '🍕', '🎵', '🏃', '📱', '💰', '🌱', '🎉', '🔒', '⭐', '🎭'
+  '👤', '💼', '✈️', '🏥', '💡', '❤️', '🎯', '📚', 
+  '🎨', '🏠', '🍕', '🎵', '🏃', '📱', '💰', '🌱'
 ];
 
 export default function CategoryManagementScreen() {
@@ -50,6 +51,7 @@ export default function CategoryManagementScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [categoryEntries, setCategoryEntries] = useState<any[]>([]);
   const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -130,29 +132,28 @@ export default function CategoryManagementScreen() {
     }
   };
 
-  const handleDeleteCategory = async (category: Category) => {
+  const handleDeleteCategory = (category: Category) => {
     if (category.isDefault) {
       showErrorAlert('Cannot delete default categories');
       return;
     }
 
-    const confirmed = await showConfirmAlert(
+    showConfirmAlert(
       'Delete Category',
-      `Are you sure you want to delete "${category.name}"? This will remove it from all entries but won't delete the entries themselves.`
-    );
-
-    if (confirmed) {
-      setIsLoading(true);
-      try {
-        await deleteCategory(category.id!);
-        showSuccessAlert('Category deleted successfully!');
-      } catch (error) {
-        console.error('Failed to delete category:', error);
-        showErrorAlert('Failed to delete category. Please try again.');
-      } finally {
-        setIsLoading(false);
+      `Are you sure you want to delete "${category.name}"? This will remove it from all entries but won't delete the entries themselves.`,
+      async () => {
+        setIsLoading(true);
+        try {
+          await deleteCategory(category.id!);
+          showSuccessAlert('Category deleted successfully!');
+        } catch (error) {
+          console.error('Failed to delete category:', error);
+          showErrorAlert('Failed to delete category. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
       }
-    }
+    );
   };
 
   const handleViewCategoryEntries = async (category: Category) => {
@@ -200,11 +201,16 @@ export default function CategoryManagementScreen() {
       key={icon}
       style={[
         styles.iconOption,
-        (editingCategory ? newCategoryIcon : newCategoryIcon) === icon && styles.selectedIconOption
+        newCategoryIcon === icon && styles.selectedIconOption
       ]}
       onPress={() => setNewCategoryIcon(icon)}
     >
       <Text style={styles.iconText}>{icon}</Text>
+      {newCategoryIcon === icon && (
+        <View style={styles.selectedIndicator}>
+          <Text style={styles.checkmarkBadge}>✓</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
@@ -335,10 +341,29 @@ export default function CategoryManagementScreen() {
             </View>
 
             {/* Icon Selection */}
-            <Text style={styles.inputLabel}>Icon (Optional)</Text>
-            <View style={styles.iconGrid}>
-              {PREDEFINED_ICONS.map(renderIconOption)}
+            <View style={styles.iconSectionHeader}>
+              <Text style={styles.inputLabel}>Category Icon</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  console.log('More button pressed - opening emoji picker');
+                  setShowEmojiPicker(true);
+                }}
+                style={styles.browseAllButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.browseAllText}>More ›</Text>
+              </TouchableOpacity>
             </View>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.iconScrollView}
+              contentContainerStyle={styles.iconScrollContent}
+              nestedScrollEnabled={true}
+            >
+              {PREDEFINED_ICONS.map(renderIconOption)}
+            </ScrollView>
 
             {/* Preview */}
             <Text style={styles.inputLabel}>Preview</Text>
@@ -411,6 +436,15 @@ export default function CategoryManagementScreen() {
           />
         </View>
       </Modal>
+
+      {/* Emoji Picker Modal */}
+      <EmojiPicker
+        visible={showEmojiPicker}
+        onEmojiSelect={(emoji) => setNewCategoryIcon(emoji)}
+        onClose={() => setShowEmojiPicker(false)}
+        selectedEmoji={newCategoryIcon}
+        title="Choose Category Icon"
+      />
     </View>
   );
 }
@@ -579,28 +613,31 @@ const styles = StyleSheet.create({
   selectedColorOption: {
     borderColor: COLORS.textPrimary,
   },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.small,
+  iconScrollView: {
     marginBottom: SPACING.medium,
   },
+  iconScrollContent: {
+    paddingRight: SPACING.medium,
+    gap: SPACING.small,
+  },
   iconOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   selectedIconOption: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '20',
+    borderWidth: 2,
+    backgroundColor: COLORS.primary + '08',
   },
   iconText: {
-    fontSize: 18,
+    fontSize: 24,
   },
   previewContainer: {
     alignItems: 'flex-start',
@@ -637,4 +674,36 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.caption,
     color: COLORS.textSecondary,
   },
+  iconSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.small,
+  },
+  browseAllButton: {
+    paddingHorizontal: SPACING.small,
+    paddingVertical: 4,
+  },
+  browseAllText: {
+    fontSize: FONT_SIZES.body,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmarkBadge: {
+    color: COLORS.card,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
 });
+

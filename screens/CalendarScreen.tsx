@@ -7,6 +7,7 @@ import { Calendar, DateData } from 'react-native-calendars';
 import { Feather } from '@expo/vector-icons';
 import StyledButton from '../components/StyledButton';
 import CategoryChip from '../components/CategoryChip';
+import EmojiPicker from '../components/EmojiPicker';
 import { COLORS, FONT_SIZES, SPACING } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useDiaryStore } from '../store/diaryStore';
@@ -32,6 +33,7 @@ export default function CalendarScreen() {
   const [newCategoryIcon, setNewCategoryIcon] = useState('📁');
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCategoriesForDeletion, setSelectedCategoriesForDeletion] = useState<number[]>([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   useEffect(() => {
     if (isFocused && selectedDate !== '') {
@@ -210,8 +212,8 @@ export default function CalendarScreen() {
   ];
 
   const PREDEFINED_ICONS = [
-    '📁', '👤', '💼', '✈️', '🏥', '💡', '❤️', '🎯', '📚', '🎨', '🏠',
-    '🍕', '🎵', '🏃', '📱', '💰', '🌱', '🎉', '🔒', '⭐', '🎭'
+    '👤', '💼', '✈️', '🏥', '💡', '❤️', '🎯', '📚', 
+    '🎨', '🏠', '🍕', '🎵', '🏃', '📱', '💰', '🌱'
   ];
 
   const handleToggleEditMode = () => {
@@ -637,8 +639,27 @@ export default function CalendarScreen() {
             </View>
 
             {/* Icon Selection */}
-            <Text style={styles.createCategoryInputLabel}>Icon (Optional)</Text>
-            <View style={styles.createCategoryIconGrid}>
+            <View style={styles.iconSectionHeader}>
+              <Text style={styles.createCategoryInputLabel}>Category Icon</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  console.log('More button pressed - opening emoji picker');
+                  setShowEmojiPicker(true);
+                }}
+                style={styles.browseAllButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.browseAllText}>More ›</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.iconScrollView}
+              contentContainerStyle={styles.iconScrollContent}
+              nestedScrollEnabled={true}
+            >
               {PREDEFINED_ICONS.map((icon) => (
                 <TouchableOpacity
                   key={icon}
@@ -649,9 +670,14 @@ export default function CalendarScreen() {
                   onPress={() => setNewCategoryIcon(icon)}
                 >
                   <Text style={styles.createCategoryIconText}>{icon}</Text>
+                  {newCategoryIcon === icon && (
+                    <View style={styles.selectedIndicator}>
+                      <Text style={styles.checkmarkBadge}>✓</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
 
             {/* Preview */}
             <Text style={styles.createCategoryInputLabel}>Preview</Text>
@@ -680,6 +706,15 @@ export default function CalendarScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Emoji Picker Modal */}
+      <EmojiPicker
+        visible={showEmojiPicker}
+        onEmojiSelect={(emoji) => setNewCategoryIcon(emoji)}
+        onClose={() => setShowEmojiPicker(false)}
+        selectedEmoji={newCategoryIcon}
+        title="Choose Category Icon"
+      />
     </ScrollView>
   );
 }
@@ -1035,28 +1070,62 @@ const styles = StyleSheet.create({
   createCategorySelectedColorOption: {
     borderColor: COLORS.textPrimary,
   },
-  createCategoryIconGrid: {
+  iconSectionHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.small,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.small,
+  },
+  browseAllButton: {
+    paddingHorizontal: SPACING.small,
+    paddingVertical: 4,
+  },
+  browseAllText: {
+    fontSize: FONT_SIZES.body,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  iconScrollView: {
     marginBottom: SPACING.medium,
   },
+  iconScrollContent: {
+    paddingRight: SPACING.medium,
+    gap: SPACING.small,
+  },
   createCategoryIconOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   createCategorySelectedIconOption: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '20',
+    borderWidth: 2,
+    backgroundColor: COLORS.primary + '08',
   },
   createCategoryIconText: {
-    fontSize: 18,
+    fontSize: 24,
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmarkBadge: {
+    color: COLORS.card,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   createCategoryPreviewContainer: {
     flexDirection: 'row',

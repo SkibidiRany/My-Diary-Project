@@ -90,7 +90,7 @@ export default function ProfileScreen() {
         navigation.navigate('EditProfile');
         break;
       case 'diary':
-        navigation.navigate('MainTabs', { screen: 'Diary' });
+        navigation.navigate('MainTabs', { screen: 'Diary', params: { screen: 'Home' } });
         break;
     }
   };

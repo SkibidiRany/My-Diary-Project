@@ -14,6 +14,7 @@ import { Category } from '../types';
 import { useCategoryStore } from '../store/categoryStore';
 import CategoryChip from './CategoryChip';
 import StyledButton from './StyledButton';
+import EmojiPicker from './EmojiPicker';
 import { COLORS, FONT_SIZES, SPACING } from '../constants/theme';
 
 interface CategoryPickerProps {
@@ -31,8 +32,8 @@ const PREDEFINED_COLORS = [
 ];
 
 const PREDEFINED_ICONS = [
-  '👤', '💼', '✈️', '🏥', '💡', '❤️', '🎯', '📚', '🎨', '🏠',
-  '🍕', '🎵', '🏃', '📱', '💰', '🌱', '🎉', '🔒', '⭐', '🎭'
+  '👤', '💼', '✈️', '🏥', '💡', '❤️', '🎯', '📚', 
+  '🎨', '🏠', '🍕', '🎵', '🏃', '📱', '💰', '🌱'
 ];
 
 export default function CategoryPicker({ 
@@ -49,6 +50,7 @@ export default function CategoryPicker({
   const [newCategoryColor, setNewCategoryColor] = useState(PREDEFINED_COLORS[0]);
   const [newCategoryIcon, setNewCategoryIcon] = useState(PREDEFINED_ICONS[0]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -139,6 +141,11 @@ export default function CategoryPicker({
       onPress={() => setNewCategoryIcon(icon)}
     >
       <Text style={styles.iconText}>{icon}</Text>
+      {newCategoryIcon === icon && (
+        <View style={styles.selectedIndicator}>
+          <Text style={styles.checkmarkBadge}>✓</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
@@ -248,10 +255,29 @@ export default function CategoryPicker({
                 </View>
 
                 {/* Icon Selection */}
-                <Text style={styles.inputLabel}>Icon (Optional)</Text>
-                <View style={styles.iconGrid}>
-                  {PREDEFINED_ICONS.map(renderIconOption)}
+                <View style={styles.iconSectionHeader}>
+                  <Text style={styles.inputLabel}>Category Icon</Text>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      console.log('More button pressed - opening emoji picker');
+                      setShowEmojiPicker(true);
+                    }}
+                    style={styles.browseAllButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.browseAllText}>More ›</Text>
+                  </TouchableOpacity>
                 </View>
+                
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.iconScrollView}
+                  contentContainerStyle={styles.iconScrollContent}
+                  nestedScrollEnabled={true}
+                >
+                  {PREDEFINED_ICONS.map(renderIconOption)}
+                </ScrollView>
               </ScrollView>
 
               <View style={styles.createModalActions}>
@@ -269,6 +295,15 @@ export default function CategoryPicker({
               </View>
             </View>
           </Modal>
+
+          {/* Emoji Picker Modal */}
+          <EmojiPicker
+            visible={showEmojiPicker}
+            onEmojiSelect={(emoji) => setNewCategoryIcon(emoji)}
+            onClose={() => setShowEmojiPicker(false)}
+            selectedEmoji={newCategoryIcon}
+            title="Choose Category Icon"
+          />
         </View>
       </Modal>
     </View>
@@ -420,27 +455,31 @@ const styles = StyleSheet.create({
   selectedColorOption: {
     borderColor: COLORS.textPrimary,
   },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  iconScrollView: {
+    marginBottom: SPACING.medium,
+  },
+  iconScrollContent: {
+    paddingRight: SPACING.medium,
     gap: SPACING.small,
   },
   iconOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   selectedIconOption: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '20',
+    borderWidth: 2,
+    backgroundColor: COLORS.primary + '08',
   },
   iconText: {
-    fontSize: 18,
+    fontSize: 24,
   },
   createModalActions: {
     flexDirection: 'row',
@@ -451,4 +490,36 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
   },
+  iconSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.small,
+  },
+  browseAllButton: {
+    paddingHorizontal: SPACING.small,
+    paddingVertical: 4,
+  },
+  browseAllText: {
+    fontSize: FONT_SIZES.body,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmarkBadge: {
+    color: COLORS.card,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
 });
+

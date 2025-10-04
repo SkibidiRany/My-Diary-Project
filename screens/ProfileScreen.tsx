@@ -41,7 +41,7 @@ interface StatCardProps {
   value: string | number;
   icon: React.ComponentProps<typeof Feather>['name'];
   subtitle?: string;
-  gradient?: string[];
+  gradient?: [string, string, ...string[]];
 }
 
 const StatCard = ({ title, value, icon, subtitle, gradient }: StatCardProps) => {
@@ -185,7 +185,7 @@ export default function ProfileScreen() {
         navigation.navigate('EditProfile');
         break;
       case 'diary':
-        navigation.navigate('MainTabs', { screen: 'Diary' });
+        navigation.navigate('MainTabs', { screen: 'Diary', params: { screen: 'Home' } });
         break;
     }
   };
