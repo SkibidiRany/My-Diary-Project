@@ -31,7 +31,7 @@ export type RootStackParamList = {
   UnlockDiary: undefined;
   Debug: undefined;
   ViewEntry: { entryId: number };
-  NewEntry: { entry?: DiaryEntry };
+  NewEntry: { entry?: DiaryEntry; createdForDate?: string };
   EditProfile: undefined;
   Settings: NavigatorScreenParams<SettingsStackParamList>;
 };

@@ -14,6 +14,7 @@ type NewEntryScreenProps = NativeStackScreenProps<RootStackParamList, 'NewEntry'
 
 export default function NewEntryScreen({ route, navigation }: NewEntryScreenProps) {
   const existingEntry = route.params?.entry;
+  const createdForDate = route.params?.createdForDate;
   const { entries } = useDiaryStore();
   
   // Get the latest entry data from the store if editing
@@ -26,14 +27,28 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
   const [tempEmoji, setTempEmoji] = useState(currentEntry?.emoji || '');
   const [isModalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [createdFor, setCreatedFor] = useState<Date>(currentEntry?.createdFor ? new Date(currentEntry.createdFor) : new Date());
+  const [createdFor, setCreatedFor] = useState<Date>(
+    currentEntry?.createdFor 
+      ? new Date(currentEntry.createdFor) 
+      : createdForDate 
+        ? new Date(createdForDate)
+        : new Date()
+  );
   const [dateError, setDateError] = useState<string>('');
   const [forceUpdate, setForceUpdate] = useState(0);
   
   // Helper function to get initial date values
-  const getInitialDateValues = (entry?: any) => {
+  const getInitialDateValues = (entry?: any, prePopulatedDate?: string) => {
     if (entry?.createdFor) {
       const date = new Date(entry.createdFor);
+      return {
+        day: date.getDate().toString().padStart(2, '0'),
+        month: (date.getMonth() + 1).toString().padStart(2, '0'),
+        year: (date.getFullYear() - 2000).toString().padStart(2, '0')
+      };
+    }
+    if (prePopulatedDate) {
+      const date = new Date(prePopulatedDate);
       return {
         day: date.getDate().toString().padStart(2, '0'),
         month: (date.getMonth() + 1).toString().padStart(2, '0'),
@@ -48,7 +63,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
     };
   };
 
-  const initialDate = getInitialDateValues(existingEntry);
+  const initialDate = getInitialDateValues(existingEntry, createdForDate);
   const [day, setDay] = useState(initialDate.day);
   const [month, setMonth] = useState(initialDate.month);
   const [year, setYear] = useState(initialDate.year);
@@ -66,7 +81,7 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
     navigation.setOptions({ title: currentEntry ? 'Edit Entry' : 'New Entry' });
   }, [navigation, currentEntry]);
 
-  // Update all form fields when editing an existing entry
+  // Update all form fields when editing an existing entry or when createdForDate changes
   useEffect(() => {
     if (currentEntry) {
       
@@ -88,8 +103,18 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
         setCreatedFor(localDate);
         setDateError(''); // Clear any existing errors
       }
+    } else if (createdForDate) {
+      // Handle pre-populated date from calendar
+      const date = new Date(createdForDate);
+      // Create a new date at noon to avoid timezone issues
+      const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
+      setDay(localDate.getDate().toString().padStart(2, '0'));
+      setMonth((localDate.getMonth() + 1).toString().padStart(2, '0'));
+      setYear((localDate.getFullYear() - 2000).toString().padStart(2, '0'));
+      setCreatedFor(localDate);
+      setDateError(''); // Clear any existing errors
     }
-  }, [currentEntry?.id, currentEntry?.createdFor, currentEntry?.title, currentEntry?.content, currentEntry?.imageUri, currentEntry?.emoji, forceUpdate]);
+  }, [currentEntry?.id, currentEntry?.createdFor, currentEntry?.title, currentEntry?.content, currentEntry?.imageUri, currentEntry?.emoji, createdForDate, forceUpdate]);
 
   // Update createdFor when date fields change
   useEffect(() => {

@@ -21,21 +21,14 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     if (isFocused && selectedDate !== '') {
-      const entriesOnDay = entries.filter(
-        (entry) => (entry.createdFor || entry.createdAt).split('T')[0] === selectedDate
-      );
-      if (entriesOnDay.length > 0) {
-        setModalVisible(true);
-      } else {
-        setSelectedDate('');
-      }
+      setModalVisible(true);
     }
-  }, [isFocused, entries, selectedDate]);
+  }, [isFocused, selectedDate]);
 
   const markedDates = useMemo(() => {
     const marks: { [key: string]: { marked: true; dotColor: string } } = {};
     entries.forEach((entry) => {
-      const dateString = (entry.createdFor || entry.createdAt).split('T')[0];
+      const dateString = entry.createdFor.split('T')[0];
       marks[dateString] = { marked: true, dotColor: COLORS.primary };
     });
     return marks;
@@ -43,15 +36,13 @@ export default function CalendarScreen() {
 
   const entriesForSelectedDay = useMemo(() => {
     return entries
-      .filter((entry) => (entry.createdFor || entry.createdAt).split('T')[0] === selectedDate)
-      .sort((a, b) => new Date(a.createdFor || a.createdAt).getTime() - new Date(b.createdFor || b.createdAt).getTime());
+      .filter((entry) => entry.createdFor.split('T')[0] === selectedDate)
+      .sort((a, b) => new Date(a.createdFor).getTime() - new Date(b.createdFor).getTime());
   }, [entries, selectedDate]);
 
   const onDayPress = (day: DateData) => {
-    if (markedDates[day.dateString]) {
-      setSelectedDate(day.dateString);
-      setModalVisible(true);
-    }
+    setSelectedDate(day.dateString);
+    setModalVisible(true);
   };
 
   /**
@@ -66,6 +57,13 @@ export default function CalendarScreen() {
   const handleCloseModal = () => {
     setModalVisible(false);
     setSelectedDate('');
+  };
+
+  const handleCreateEntry = () => {
+    setModalVisible(false);
+    // Create a date at noon to avoid timezone issues
+    const selectedDateObj = new Date(selectedDate + 'T12:00:00.000Z');
+    navigation.navigate('NewEntry', { createdForDate: selectedDateObj.toISOString() });
   };
 
   return (
@@ -113,7 +111,12 @@ export default function CalendarScreen() {
                 </TouchableOpacity>
               )}
             />
-            <StyledButton title="Close" onPress={handleCloseModal} />
+            <StyledButton 
+              title={`Add Entry for ${new Date(selectedDate + 'T00:00:00').toLocaleDateString()}`} 
+              onPress={handleCreateEntry} 
+              style={styles.createEntryButton}
+            />
+            <StyledButton title="Close" onPress={handleCloseModal} variant="secondary" />
           </Pressable>
         </Pressable>
       </Modal>
@@ -140,4 +143,7 @@ const styles = StyleSheet.create({
   },
   entryEmoji: { fontSize: 20, marginRight: SPACING.small },
   entryTitle: { fontSize: FONT_SIZES.body, color: COLORS.textPrimary, flex: 1 },
+  createEntryButton: {
+    marginBottom: SPACING.small,
+  },
 });
