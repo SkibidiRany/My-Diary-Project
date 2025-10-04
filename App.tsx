@@ -23,6 +23,15 @@ export default function App() {
   const { initializeSecurity, getSecurityStatus, isUnlocked } = useSecurityStore();
   const { fetchUserProfile, clearProfile, userProfile } = useUserStore();
 
+  // Debug: Monitor isUnlocked state changes
+  useEffect(() => {
+    console.log('🔐 Security state changed:', { 
+      isUnlocked, 
+      isInitialized: useSecurityStore.getState().isInitialized,
+      hasMasterPassword: useSecurityStore.getState().getSecurityStatus().hasMasterPassword
+    });
+  }, [isUnlocked]);
+
   useEffect(() => {
     const handleUserChange = async (currentUser: User | null) => {
       console.log('👤 User state changed:', { 

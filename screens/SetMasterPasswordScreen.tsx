@@ -62,25 +62,18 @@ export default function SetMasterPasswordScreen({ navigation }: SetMasterPasswor
     setIsLoading(true);
     try {
       await setMasterPassword(password);
-      Alert.alert(
-        'Success!',
-        'Your master password has been set. Your diary is now encrypted and secure.',
-        [
-          {
-            text: 'Continue',
-            onPress: () => navigation.navigate('MainTabs', { screen: 'Diary', params: { screen: 'Home' } })
-          }
-        ]
-      );
+      console.log('✅ Master password setup complete - app will automatically navigate to diary');
+      // Note: No manual navigation needed! 
+      // App.tsx will automatically detect isUnlocked=true and render the main diary
     } catch (error) {
       console.error('Failed to set master password:', error);
       Alert.alert(
         'Error',
         error instanceof Error ? error.message : 'Failed to set master password. Please try again.'
       );
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Only reset loading on error
     }
+    // Don't reset isLoading on success - let the transition happen smoothly
   };
 
   const renderPasswordRequirements = () => {
