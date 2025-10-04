@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import StyledButton from '../components/StyledButton';
 import StyledTextInput from '../components/StyledTextInput';
+import KeyboardAwareScrollView from '../components/KeyboardAwareScrollView';
 import { COLORS } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSecurityStore } from '../store/securityStore';
@@ -127,9 +127,11 @@ export default function UnlockDiaryScreen({ navigation }: UnlockDiaryScreenProps
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      extraScrollHeight={50}
+      extraHeight={100}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
         <View style={styles.header}>
@@ -196,7 +198,7 @@ export default function UnlockDiaryScreen({ navigation }: UnlockDiaryScreenProps
           </Text>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

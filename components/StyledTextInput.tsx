@@ -7,19 +7,33 @@ import { COLORS, FONT_SIZES } from '../constants/theme';
 interface StyledTextInputProps extends TextInputProps {
   label?: string;
   error?: boolean;
+  multiline?: boolean;
 }
 
-export default function StyledTextInput({ label, error, style, ...props }: StyledTextInputProps) {
+export default function StyledTextInput({ label, error, style, multiline, onFocus, ...props }: StyledTextInputProps) {
+  const handleFocus = (e: any) => {
+    console.log('🎯 StyledTextInput: onFocus handler called');
+    if (onFocus) {
+      console.log('✅ StyledTextInput: Calling parent onFocus');
+      onFocus(e);
+    } else {
+      console.log('⚠️ StyledTextInput: No onFocus prop provided');
+    }
+  };
+
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
       <TextInput
         style={[
           styles.input,
+          multiline && styles.multilineInput,
           error && styles.inputError,
           style
         ]}
         placeholderTextColor={COLORS.textSecondary}
+        multiline={multiline}
+        onFocus={handleFocus}
         {...props}
       />
     </View>
@@ -44,6 +58,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     fontSize: FONT_SIZES.body,
     color: COLORS.textPrimary,
+  },
+  multilineInput: {
+    textAlignVertical: 'top', // Fix for Android - align text to top instead of center
+    paddingTop: 14, // Consistent padding for multiline
   },
   inputError: {
     borderColor: COLORS.error,

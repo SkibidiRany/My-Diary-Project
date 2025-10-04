@@ -8,7 +8,10 @@ import {
   Platform,
   Modal,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
@@ -249,38 +252,52 @@ export default function ExportImportScreen() {
         animationType="fade"
         onRequestClose={() => handleModalCancel('export')}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Export Diary</Text>
-            <Text style={styles.modalSubtitle}>Enter your master password to create an encrypted backup:</Text>
-            
-            <TextInput
-              style={styles.modalInput}
-              value={exportPassword}
-              onChangeText={setExportPassword}
-              placeholder="Master password"
-              secureTextEntry={true}
-              autoFocus={true}
-              placeholderTextColor={COLORS.textSecondary}
-            />
-            
-            <View style={styles.modalButtons}>
-              <StyledButton 
-                title="Cancel" 
-                onPress={() => handleModalCancel('export')} 
-                variant="secondary"
-                style={styles.modalButton}
-              />
-              <StyledButton 
-                title="Export" 
-                onPress={handleExportConfirm} 
-                variant="primary"
-                style={styles.modalButton}
-                disabled={!exportPassword.trim()}
-              />
-            </View>
-          </View>
-        </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={0} // Modal has no header
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>Export Diary</Text>
+                  <Text style={styles.modalSubtitle}>Enter your master password to create an encrypted backup:</Text>
+                  
+                  <TextInput
+                    style={styles.modalInput}
+                    value={exportPassword}
+                    onChangeText={setExportPassword}
+                    placeholder="Master password"
+                    secureTextEntry={true}
+                    autoFocus={true}
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
+                  
+                  <View style={styles.modalButtons}>
+                    <StyledButton 
+                      title="Cancel" 
+                      onPress={() => handleModalCancel('export')} 
+                      variant="secondary"
+                      style={styles.modalButton}
+                    />
+                    <StyledButton 
+                      title="Export" 
+                      onPress={handleExportConfirm} 
+                      variant="primary"
+                      style={styles.modalButton}
+                      disabled={!exportPassword.trim()}
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Import Password Modal */}
@@ -290,38 +307,52 @@ export default function ExportImportScreen() {
         animationType="fade"
         onRequestClose={() => handleModalCancel('import')}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Import Diary</Text>
-            <Text style={styles.modalSubtitle}>Enter your master password to decrypt the backup:</Text>
-            
-            <TextInput
-              style={styles.modalInput}
-              value={importPassword}
-              onChangeText={setImportPassword}
-              placeholder="Master password"
-              secureTextEntry={true}
-              autoFocus={true}
-              placeholderTextColor={COLORS.textSecondary}
-            />
-            
-            <View style={styles.modalButtons}>
-              <StyledButton 
-                title="Cancel" 
-                onPress={() => handleModalCancel('import')} 
-                variant="secondary"
-                style={styles.modalButton}
-              />
-              <StyledButton 
-                title="Import" 
-                onPress={handleImportConfirm} 
-                variant="primary"
-                style={styles.modalButton}
-                disabled={!importPassword.trim()}
-              />
-            </View>
-          </View>
-        </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={0} // Modal has no header
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>Import Diary</Text>
+                  <Text style={styles.modalSubtitle}>Enter your master password to decrypt the backup:</Text>
+                  
+                  <TextInput
+                    style={styles.modalInput}
+                    value={importPassword}
+                    onChangeText={setImportPassword}
+                    placeholder="Master password"
+                    secureTextEntry={true}
+                    autoFocus={true}
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
+                  
+                  <View style={styles.modalButtons}>
+                    <StyledButton 
+                      title="Cancel" 
+                      onPress={() => handleModalCancel('import')} 
+                      variant="secondary"
+                      style={styles.modalButton}
+                    />
+                    <StyledButton 
+                      title="Import" 
+                      onPress={handleImportConfirm} 
+                      variant="primary"
+                      style={styles.modalButton}
+                      disabled={!importPassword.trim()}
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Loading overlay */}
@@ -398,6 +429,10 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.small,
     flex: 1,
     lineHeight: 20,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20, // Adjusted padding
   },
   modalOverlay: {
     flex: 1,

@@ -1,6 +1,17 @@
 // screens/FirstTimeProfileSetupScreen.tsx
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  ActivityIndicator, 
+  Alert, 
+  Platform, 
+  KeyboardAvoidingView, 
+  ScrollView, 
+  TouchableWithoutFeedback, 
+  Keyboard 
+} from 'react-native';
 import StyledButton from '../components/StyledButton';
 import StyledTextInput from '../components/StyledTextInput';
 import { COLORS, SPACING, FONT_SIZES } from '../constants/theme';
@@ -21,6 +32,10 @@ export default function FirstTimeProfileSetupScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ username?: string }>({});
 
+  // Refs for cursor tracking
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fieldPositions = useRef<{ [key: string]: { y: number; height: number } }>({});
+
   const validateForm = () => {
     const newErrors: { username?: string } = {};
     
@@ -34,6 +49,53 @@ export default function FirstTimeProfileSetupScreen({ navigation }: Props) {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Function to handle field layout measurements
+  const handleFieldLayout = (fieldName: string, event: any) => {
+    const { y, height } = event.nativeEvent.layout;
+    fieldPositions.current[fieldName] = { y, height };
+  };
+
+  // Function to scroll to active field with cursor position tracking
+  const scrollToField = (fieldName: string) => {
+    const fieldPosition = fieldPositions.current[fieldName];
+    if (fieldPosition && scrollViewRef.current) {
+      const { y, height } = fieldPosition;
+      
+      // For multiline fields, we need to account for cursor position
+      let targetY = y;
+      
+      // If it's the bio field, add extra space to show more of the field
+      if (fieldName === 'bio') {
+        // Calculate approximate cursor position based on text content
+        const lineHeight = 20; // Approximate line height
+        const lines = bio.split('\n').length;
+        const approximateCursorY = y + (lines * lineHeight);
+        
+        // Scroll to show the cursor area with extra padding
+        targetY = approximateCursorY - 200; // More padding for cursor area
+      } else {
+        // For single-line fields, standard padding
+        targetY = y - 100;
+      }
+      
+      const scrollY = Math.max(0, targetY);
+      scrollViewRef.current?.scrollTo({
+        y: scrollY,
+        animated: true,
+      });
+    }
+  };
+
+  // Function to handle cursor position changes in multiline fields
+  const handleCursorPositionChange = (fieldName: string) => {
+    // For multiline fields, re-scroll when cursor position changes
+    if (fieldName === 'bio') {
+      setTimeout(() => {
+        scrollToField(fieldName);
+      }, 150); // Slightly longer delay to ensure cursor position is updated
+    }
   };
 
   const handleCompleteSetup = async () => {
@@ -113,84 +175,119 @@ export default function FirstTimeProfileSetupScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome to Your Diary! 📖</Text>
-          <Text style={styles.subtitle}>
-            Let's set up your profile to get started.
-            You can always update your profile information later in the settings.
-          </Text>            
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.label}>
-              Username <Text style={styles.required}>*</Text>
-            </Text>
-            <StyledTextInput
-              value={username}
-              onChangeText={setUsername}
-              placeholder="Your display name"
-              error={!!errors.username}
-              maxLength={30}
-            />
-            {errors.username && (
-              <Text style={styles.errorText}>{errors.username}</Text>
-            )}
-          </View>
-
-          <View style={styles.fieldContainer}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Birthdate</Text>
-              <Text style={styles.optional}>(optional)</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={0} // No header in this screen
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Welcome to Your Diary! 📖</Text>
+              <Text style={styles.subtitle}>
+                Let's set up your profile to get started.
+                You can always update your profile information later in the settings.
+              </Text>            
             </View>
-            <StyledTextInput
-              value={birthdate}
-              onChangeText={setBirthdate}
-              placeholder="e.g., January 1, 2000"
-            />
-          </View>
 
-          <View style={styles.fieldContainer}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Pronouns</Text>
-              <Text style={styles.optional}>(optional)</Text>
+            <View style={styles.form}>
+              <View 
+                onLayout={(event) => handleFieldLayout('username', event)}
+                style={styles.fieldContainer}
+              >
+                <Text style={styles.label}>
+                  Username <Text style={styles.required}>*</Text>
+                </Text>
+                <StyledTextInput
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="Your display name"
+                  error={!!errors.username}
+                  maxLength={30}
+                  onFocus={() => scrollToField('username')}
+                />
+                {errors.username && (
+                  <Text style={styles.errorText}>{errors.username}</Text>
+                )}
+              </View>
+
+              <View 
+                onLayout={(event) => handleFieldLayout('birthdate', event)}
+                style={styles.fieldContainer}
+              >
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Birthdate</Text>
+                  <Text style={styles.optional}>(optional)</Text>
+                </View>
+                <StyledTextInput
+                  value={birthdate}
+                  onChangeText={setBirthdate}
+                  placeholder="e.g., January 1, 2000"
+                  onFocus={() => scrollToField('birthdate')}
+                />
+              </View>
+
+              <View 
+                onLayout={(event) => handleFieldLayout('pronouns', event)}
+                style={styles.fieldContainer}
+              >
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Pronouns</Text>
+                  <Text style={styles.optional}>(optional)</Text>
+                </View>
+                <StyledTextInput
+                  value={pronouns}
+                  onChangeText={setPronouns}
+                  placeholder="e.g., she/her, they/them"
+                  onFocus={() => scrollToField('pronouns')}
+                />
+              </View>
+
+              <View 
+                onLayout={(event) => handleFieldLayout('bio', event)}
+                style={styles.fieldContainer}
+              >
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Bio</Text>
+                  <Text style={styles.optional}>(optional)</Text>
+                </View>
+                <StyledTextInput
+                  value={bio}
+                  onChangeText={(text) => {
+                    setBio(text);
+                    // Use enhanced scroll for bio field
+                    setTimeout(() => scrollToField('bio'), 100);
+                  }}
+                  placeholder="Tell us a little about yourself"
+                  multiline
+                  numberOfLines={4}
+                  style={{ height: 120 }}
+                  onFocus={() => scrollToField('bio')}
+                  onSelectionChange={() => {
+                    // Use enhanced scroll for bio field
+                    setTimeout(() => scrollToField('bio'), 100);
+                  }}
+                />
+              </View>
+
+              <View style={styles.buttonContainer}>
+                <StyledButton
+                  title="Complete Setup"
+                  onPress={handleCompleteSetup}
+                  disabled={!username.trim() || isLoading}
+                />
+              </View>
             </View>
-            <StyledTextInput
-              value={pronouns}
-              onChangeText={setPronouns}
-              placeholder="e.g., she/her, they/them"
-            />
           </View>
-
-          <View style={styles.fieldContainer}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Bio</Text>
-              <Text style={styles.optional}>(optional)</Text>
-            </View>
-            <StyledTextInput
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Tell us a little about yourself"
-              multiline
-              numberOfLines={4}
-              style={styles.bioInput}
-            />
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <StyledButton
-              title="Complete Setup"
-              onPress={handleCompleteSetup}
-              disabled={!username.trim() || isLoading}
-            />
-          </View>
-
-          
-        </View>
-      </View>
-    </ScrollView>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -198,6 +295,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,

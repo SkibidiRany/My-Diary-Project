@@ -1,10 +1,11 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef, useEffect } from 'react';
-import { ActivityIndicator, Image, Keyboard, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, Platform, KeyboardAvoidingView, ScrollView, TextInput } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, Platform, TextInput, Dimensions, ScrollView } from 'react-native';
 import StyledButton from '../components/StyledButton';
 import StyledTextInput from '../components/StyledTextInput';
 import CategoryPicker from '../components/CategoryPicker';
+import KeyboardAwareScrollView from '../components/KeyboardAwareScrollView';
 import { COLORS } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { uploadImageAndGetURL } from '../services/firestoreService';
@@ -13,6 +14,8 @@ import { useCategoryStore } from '../store/categoryStore';
 import { showSuccessAlert, showErrorAlert, showConfirmAlert } from '../utils/alerts';
 
 type NewEntryScreenProps = NativeStackScreenProps<RootStackParamList, 'NewEntry'>;
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function NewEntryScreen({ route, navigation }: NewEntryScreenProps) {
   const existingEntry = route.params?.entry;
@@ -39,6 +42,10 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
   );
   const [dateError, setDateError] = useState<string>('');
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Store field Y positions
+  const fieldPositions = useRef<{ [key: string]: number }>({});
   
   // Helper function to get initial date values
   const getInitialDateValues = (entry?: any, prePopulatedDate?: string) => {
@@ -83,6 +90,28 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
 
   useEffect(() => {
     initializeCategories();
+  }, []);
+
+  // Listen to keyboard events
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
   }, []);
 
   React.useLayoutEffect(() => {
@@ -239,10 +268,32 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
     }, 100);
   };
 
-  const scrollToContent = () => {
+  // Capture field position when it's laid out
+  const handleLayout = (fieldName: string) => (event: any) => {
+    const { y } = event.nativeEvent.layout;
+    fieldPositions.current[fieldName] = y;
+  };
+
+  // Scroll to make field visible above keyboard
+  const scrollToField = (fieldName: string) => {
     setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 300);
+      const fieldY = fieldPositions.current[fieldName];
+      if (fieldY !== undefined) {
+        // Calculate how much space is available (screen height - keyboard height)
+        const availableHeight = SCREEN_HEIGHT - keyboardHeight;
+        
+        // We want the field to be at 25% from the top of visible area
+        const desiredFieldPosition = availableHeight * 0.25;
+        
+        // Calculate scroll position to achieve this
+        const scrollY = fieldY - desiredFieldPosition;
+        
+        scrollViewRef.current?.scrollTo({
+          y: Math.max(0, scrollY),
+          animated: true,
+        });
+      }
+    }, 100); // Small delay for keyboard to start appearing
   };
 
   const pickImage = async () => {
@@ -335,18 +386,13 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <KeyboardAwareScrollView
+      ref={scrollViewRef}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      extraScrollHeight={100}
+      extraHeight={250}
+      style={styles.container}
     >
-      <ScrollView 
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={COLORS.primary} />
@@ -435,27 +481,31 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
                 style={styles.categoryPicker}
               />
               
-              <TextInput
-                style={styles.titleInput}
-                value={title}
-                onChangeText={setTitle}
-                placeholder="Title"
-                placeholderTextColor={COLORS.textSecondary}
-                multiline={false}
-                onFocus={scrollToContent}
-              />
+              <View onLayout={handleLayout('title')}>
+                <TextInput
+                  style={styles.titleInput}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="Title"
+                  placeholderTextColor={COLORS.textSecondary}
+                  multiline={false}
+                  onFocus={() => scrollToField('title')}
+                />
+              </View>
               
-              <TextInput
-                ref={contentRef}
-                style={styles.contentInput}
-                value={content}
-                onChangeText={setContent}
-                placeholder="Start writing..."
-                placeholderTextColor={COLORS.textSecondary}
-                multiline={true}
-                textAlignVertical="top"
-                onFocus={scrollToContent}
-              />
+              <View onLayout={handleLayout('content')}>
+                <TextInput
+                  ref={contentRef}
+                  style={styles.contentInput}
+                  value={content}
+                  onChangeText={setContent}
+                  placeholder="Start writing..."
+                  placeholderTextColor={COLORS.textSecondary}
+                  multiline={true}
+                  textAlignVertical="top"
+                  onFocus={() => scrollToField('content')}
+                />
+              </View>
             </View>
 
             {/* Save Button */}
@@ -469,25 +519,31 @@ export default function NewEntryScreen({ route, navigation }: NewEntryScreenProp
             </View>
           </>
         )}
-      </ScrollView>
       
       {/* Emoji Modal */}
       <Modal animationType="slide" transparent={true} visible={isModalVisible} onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>What's your mood?</Text>
-            <StyledTextInput 
-              style={styles.emojiInput}
-              placeholder="Type emojis here..."
-              value={tempEmoji}
-              onChangeText={setTempEmoji}
-              maxLength={30}
-            />
-            <StyledButton title="Set Mood" onPress={handleSelectEmoji} />
+        <KeyboardAwareScrollView
+          keyboardVerticalOffset={0} // Modal has no header
+          extraScrollHeight={50}
+          extraHeight={100}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>What's your mood?</Text>
+              <StyledTextInput 
+                style={styles.emojiInput}
+                placeholder="Type emojis here..."
+                value={tempEmoji}
+                onChangeText={setTempEmoji}
+                maxLength={30}
+              />
+              <StyledButton title="Set Mood" onPress={handleSelectEmoji} />
+            </View>
           </View>
-        </View>
+        </KeyboardAwareScrollView>
       </Modal>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -495,13 +551,6 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: COLORS.background 
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 100, // Extra space for keyboard
   },
   loadingContainer: { 
     flex: 1, 

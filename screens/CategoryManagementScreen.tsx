@@ -9,8 +9,12 @@ import {
   Alert,
   Modal,
   TextInput,
-  ScrollView,
   ActivityIndicator,
+  Platform,
+  ScrollView,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useCategoryStore } from '../store/categoryStore';
@@ -308,98 +312,112 @@ export default function CategoryManagementScreen() {
           cancelEdit();
         }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {editingCategory ? 'Edit Category' : 'Create New Category'}
-            </Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setIsCreating(false);
-                cancelEdit();
-              }}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={0} // Modal has no header
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.modalContainer}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    {editingCategory ? 'Edit Category' : 'Create New Category'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => {
+                      setIsCreating(false);
+                      cancelEdit();
+                    }}
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
 
-          <ScrollView style={styles.modalContent}>
-            {/* Category Name Input */}
-            <Text style={styles.inputLabel}>Category Name</Text>
-            <StyledTextInput
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-              placeholder="Enter category name"
-              style={styles.textInput}
-            />
+                <View style={styles.modalContent}>
+                {/* Category Name Input */}
+                <Text style={styles.inputLabel}>Category Name</Text>
+                <StyledTextInput
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                  placeholder="Enter category name"
+                  style={styles.textInput}
+                />
 
-            {/* Color Selection */}
-            <Text style={styles.inputLabel}>Color</Text>
-            <View style={styles.colorGrid}>
-              {PREDEFINED_COLORS.map(renderColorOption)}
-            </View>
+                {/* Color Selection */}
+                <Text style={styles.inputLabel}>Color</Text>
+                <View style={styles.colorGrid}>
+                  {PREDEFINED_COLORS.map(renderColorOption)}
+                </View>
 
-            {/* Icon Selection */}
-            <View style={styles.iconSectionHeader}>
-              <Text style={styles.inputLabel}>Category Icon</Text>
-              <TouchableOpacity 
-                onPress={() => {
-                  console.log('More button pressed - opening emoji picker');
-                  setShowEmojiPicker(true);
-                }}
-                style={styles.browseAllButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Text style={styles.browseAllText}>More ›</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.iconScrollView}
-              contentContainerStyle={styles.iconScrollContent}
-              nestedScrollEnabled={true}
-            >
-              {PREDEFINED_ICONS.map(renderIconOption)}
+                {/* Icon Selection */}
+                <View style={styles.iconSectionHeader}>
+                  <Text style={styles.inputLabel}>Category Icon</Text>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      console.log('More button pressed - opening emoji picker');
+                      setShowEmojiPicker(true);
+                    }}
+                    style={styles.browseAllButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.browseAllText}>More ›</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.iconScrollView}
+                  contentContainerStyle={styles.iconScrollContent}
+                  nestedScrollEnabled={true}
+                >
+                  {PREDEFINED_ICONS.map(renderIconOption)}
+                </ScrollView>
+
+                {/* Preview */}
+                <Text style={styles.inputLabel}>Preview</Text>
+                <View style={styles.previewContainer}>
+                  <CategoryChip
+                    category={{
+                      id: 0,
+                      name: newCategoryName || 'Category Name',
+                      color: newCategoryColor,
+                      icon: newCategoryIcon,
+                      createdAt: '',
+                      isDefault: false,
+                    }}
+                    size="medium"
+                    showIcon={true}
+                  />
+                </View>
+                </View>
+
+                <View style={styles.modalActions}>
+                  <StyledButton
+                    title="Cancel"
+                    onPress={() => {
+                      setIsCreating(false);
+                      cancelEdit();
+                    }}
+                    variant="secondary"
+                    style={styles.cancelButton}
+                  />
+                  <StyledButton
+                    title={editingCategory ? 'Update Category' : 'Create Category'}
+                    onPress={editingCategory ? handleEditCategory : handleCreateCategory}
+                    disabled={!newCategoryName.trim() || isLoading}
+                  />
+                </View>
+              </View>
             </ScrollView>
-
-            {/* Preview */}
-            <Text style={styles.inputLabel}>Preview</Text>
-            <View style={styles.previewContainer}>
-              <CategoryChip
-                category={{
-                  id: 0,
-                  name: newCategoryName || 'Category Name',
-                  color: newCategoryColor,
-                  icon: newCategoryIcon,
-                  createdAt: '',
-                  isDefault: false,
-                }}
-                size="medium"
-                showIcon={true}
-              />
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalActions}>
-            <StyledButton
-              title="Cancel"
-              onPress={() => {
-                setIsCreating(false);
-                cancelEdit();
-              }}
-              variant="secondary"
-              style={styles.cancelButton}
-            />
-            <StyledButton
-              title={editingCategory ? 'Update Category' : 'Create Category'}
-              onPress={editingCategory ? handleEditCategory : handleCreateCategory}
-              disabled={!newCategoryName.trim() || isLoading}
-            />
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Category Entries Modal */}
@@ -557,6 +575,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.body,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20, // Adjusted padding
   },
   modalContainer: {
     flex: 1,

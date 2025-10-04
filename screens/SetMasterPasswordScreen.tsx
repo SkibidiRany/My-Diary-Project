@@ -1,14 +1,16 @@
 // screens/SetMasterPasswordScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
+  KeyboardAvoidingView,
   ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import StyledButton from '../components/StyledButton';
@@ -27,6 +29,31 @@ export default function SetMasterPasswordScreen({ navigation }: SetMasterPasswor
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
   const { setMasterPassword } = useSecurityStore();
+
+  // Refs for cursor tracking
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fieldPositions = useRef<{ [key: string]: { y: number; height: number } }>({});
+
+  // Function to handle field layout measurements
+  const handleFieldLayout = (fieldName: string, event: any) => {
+    const { y, height } = event.nativeEvent.layout;
+    fieldPositions.current[fieldName] = { y, height };
+  };
+
+  // Function to scroll to active field (like WhatsApp)
+  const scrollToField = (fieldName: string) => {
+    const fieldPosition = fieldPositions.current[fieldName];
+    if (fieldPosition && scrollViewRef.current) {
+      const { y, height } = fieldPosition;
+      
+      // Scroll to show the field with some padding above it
+      const scrollY = Math.max(0, y - 100); // 100px padding above the field
+      scrollViewRef.current?.scrollTo({
+        y: scrollY,
+        animated: true,
+      });
+    }
+  };
 
   const handlePasswordChange = (text: string) => {
     setPassword(text);
@@ -104,73 +131,93 @@ export default function SetMasterPasswordScreen({ navigation }: SetMasterPasswor
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Set Master Password</Text>
-          <Text style={styles.subtitle}>
-            Create a strong password to encrypt your diary entries. This password will be required to access your diary.
-          </Text>
-
-          <View style={styles.form}>
-            <StyledTextInput
-              label="Master Password"
-              value={password}
-              onChangeText={handlePasswordChange}
-              secureTextEntry
-              placeholder="Enter your master password"
-              error={passwordErrors.length > 0}
-            />
-
-            <StyledTextInput
-              label="Confirm Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              placeholder="Confirm your master password"
-              error={passwordErrors.length > 0}
-            />
-
-            {password.length > 0 && renderPasswordRequirements()}
-
-            {passwordErrors.length > 0 && (
-              <View style={styles.errorContainer}>
-                {passwordErrors.map((error, index) => (
-                  <Text key={index} style={styles.errorText}>
-                    • {error}
-                  </Text>
-                ))}
-              </View>
-            )}
-
-            <StyledButton
-              title={isLoading ? 'Setting up encryption...' : 'Set Master Password'}
-              onPress={handleSetPassword}
-              disabled={isLoading || password.length === 0 || confirmPassword.length === 0}
-              style={styles.button}
-            />
-
-            {isLoading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.loadingText}>Setting up encryption...</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.securityInfo}>
-            <Text style={styles.securityTitle}>🔐 Security Information</Text>
-            <Text style={styles.securityText}>
-              • Your password is never stored on our servers{'\n'}
-              • All diary entries are encrypted before being saved{'\n'}
-              • You'll need this password to access your diary{'\n'}
-              • Make sure to remember this password - it cannot be recovered
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <Text style={styles.title}>Set Master Password</Text>
+            <Text style={styles.subtitle}>
+              Create a strong password to encrypt your diary entries. This password will be required to access your diary.
             </Text>
+
+            <View style={styles.form}>
+              <View 
+                onLayout={(event) => handleFieldLayout('password', event)}
+                style={styles.fieldContainer}
+              >
+                <StyledTextInput
+                  label="Master Password"
+                  value={password}
+                  onChangeText={handlePasswordChange}
+                  secureTextEntry
+                  placeholder="Enter your master password"
+                  error={passwordErrors.length > 0}
+                  onFocus={() => scrollToField('password')}
+                />
+              </View>
+
+              <View 
+                onLayout={(event) => handleFieldLayout('confirmPassword', event)}
+                style={styles.fieldContainer}
+              >
+                <StyledTextInput
+                  label="Confirm Password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  placeholder="Confirm your master password"
+                  error={passwordErrors.length > 0}
+                  onFocus={() => scrollToField('confirmPassword')}
+                />
+              </View>
+
+              {password.length > 0 && renderPasswordRequirements()}
+
+              {passwordErrors.length > 0 && (
+                <View style={styles.errorContainer}>
+                  {passwordErrors.map((error, index) => (
+                    <Text key={index} style={styles.errorText}>
+                      • {error}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              <StyledButton
+                title={isLoading ? 'Setting up encryption...' : 'Set Master Password'}
+                onPress={handleSetPassword}
+                disabled={isLoading || password.length === 0 || confirmPassword.length === 0}
+                style={styles.button}
+              />
+
+              {isLoading && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <Text style={styles.loadingText}>Setting up encryption...</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.securityInfo}>
+              <Text style={styles.securityTitle}>🔐 Security Information</Text>
+              <Text style={styles.securityText}>
+                • Your password is never stored on our servers{'\n'}
+                • All diary entries are encrypted before being saved{'\n'}
+                • You'll need this password to access your diary{'\n'}
+                • Make sure to remember this password - it cannot be recovered
+              </Text>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
@@ -180,13 +227,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollContainer: {
+  scrollContent: {
     flexGrow: 1,
+    paddingBottom: 20, // Adjusted padding
   },
   content: {
     flex: 1,
     padding: 20,
     justifyContent: 'center',
+  },
+  fieldContainer: {
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
