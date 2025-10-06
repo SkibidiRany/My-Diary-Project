@@ -74,7 +74,7 @@ export default {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "output": "static",
+    "output": "server",
     "plugins": plugins,
     "extra": {
       "eas": {
