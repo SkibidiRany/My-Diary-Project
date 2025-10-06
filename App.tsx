@@ -11,10 +11,11 @@ import { useDiaryStore } from './store/diaryStore';
 import { useSecurityStore } from './store/securityStore';
 import { useUserStore } from './store/userStore';
 import { COLORS } from './constants/theme';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 type User = firebase.User;
 
-export default function App() {
+function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
@@ -22,6 +23,16 @@ export default function App() {
   const { initialize, isInitialized, syncCloudToLocal } = useDiaryStore();
   const { initializeSecurity, getSecurityStatus, isUnlocked } = useSecurityStore();
   const { fetchUserProfile, clearProfile, userProfile } = useUserStore();
+
+  // Debug: Log app state
+  console.log('📱 App state:', {
+    isAuthReady,
+    hasUser: !!user,
+    isProfileLoaded,
+    hasUserProfile: !!userProfile,
+    isInitialized,
+    isUnlocked
+  });
 
   // Debug: Monitor isUnlocked state changes
   useEffect(() => {
@@ -190,6 +201,14 @@ export default function App() {
     <NavigationContainer>
       <AppNavigator />
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }
 
