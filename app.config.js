@@ -81,6 +81,9 @@ export default {
         "projectId": "c49bf83d-1db1-4c22-8dbf-8ccdf7c12a2d"
       }
     },
+    "experiments": {
+      "baseUrl": "/My-Diary-Project"
+    },
     "sdkVersion": "54.0.0",
     "platforms": ["ios", "android", "web"],
     "privacy": "public"
