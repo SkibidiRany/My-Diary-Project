@@ -19,7 +19,7 @@ type CalendarNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export default function CalendarScreen() {
   const navigation = useNavigation<CalendarNavigationProp>();
   const entries = useDiaryStore((state) => state.entries);
-  const { categories, selectedCategoryId, setSelectedCategory: setCategoryFilter, initialize: initializeCategories, addCategory, deleteCategory } = useCategoryStore();
+  const { categories, selectedCategoryId, setSelectedCategory: setCategoryFilter, initialize: initializeCategories, addCategory, deleteCategory, updateCategory } = useCategoryStore();
   const isFocused = useIsFocused();
 
   const [selectedDate, setSelectedDate] = useState('');
@@ -34,6 +34,11 @@ export default function CalendarScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCategoriesForDeletion, setSelectedCategoriesForDeletion] = useState<number[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryColor, setEditCategoryColor] = useState('#006d77');
+  const [editCategoryIcon, setEditCategoryIcon] = useState('📁');
 
   useEffect(() => {
     if (isFocused && selectedDate !== '') {
@@ -283,6 +288,59 @@ export default function CalendarScreen() {
     setSelectedCategoriesForDeletion([]);
   };
 
+  const handleEditCategory = (category: any) => {
+    setEditingCategory(category);
+    setEditCategoryName(category.name);
+    setEditCategoryColor(category.color);
+    setEditCategoryIcon(category.icon || '📁');
+    setIsEditingCategory(true);
+    setCategoryModalVisible(false);
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!editingCategory || !editCategoryName.trim()) {
+      showErrorAlert('Please enter a category name');
+      return;
+    }
+
+    // Check for duplicate names (excluding current category)
+    const existingCategory = categories.find(
+      cat => cat.id !== editingCategory.id && 
+      cat.name.toLowerCase() === editCategoryName.trim().toLowerCase()
+    );
+    if (existingCategory) {
+      showErrorAlert('A category with this name already exists');
+      return;
+    }
+
+    try {
+      await updateCategory(editingCategory.id, {
+        name: editCategoryName.trim(),
+        color: editCategoryColor,
+        icon: editCategoryIcon,
+        isDefault: editingCategory.isDefault,
+      });
+      
+      setEditingCategory(null);
+      setEditCategoryName('');
+      setEditCategoryColor('#006d77');
+      setEditCategoryIcon('📁');
+      setIsEditingCategory(false);
+      showSuccessAlert('Category updated successfully!');
+    } catch (error) {
+      console.error('Failed to update category:', error);
+      showErrorAlert('Failed to update category. Please try again.');
+    }
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategory(null);
+    setEditCategoryName('');
+    setEditCategoryColor('#006d77');
+    setEditCategoryIcon('📁');
+    setIsEditingCategory(false);
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Calendar
@@ -511,6 +569,17 @@ export default function CalendarScreen() {
               </Text>
             </View>
             <View style={styles.categoryModalActions}>
+              <TouchableOpacity
+                style={styles.categoryModalActionButton}
+                onPress={() => {
+                  const category = categories.find(cat => cat.id === selectedCategory);
+                  if (category) {
+                    handleEditCategory(category);
+                  }
+                }}
+              >
+                <Feather name="edit-3" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
               {selectedCategory && !categories.find(cat => cat.id === selectedCategory)?.isDefault && (
                 <TouchableOpacity
                   style={[styles.categoryModalActionButton, styles.categoryModalDeleteButton]}
@@ -707,12 +776,132 @@ export default function CalendarScreen() {
         </View>
       </Modal>
 
+      {/* Edit Category Modal */}
+      <Modal
+        animationType="slide"
+        presentationStyle="pageSheet"
+        visible={isEditingCategory}
+        onRequestClose={handleCancelEditCategory}
+      >
+        <View style={styles.createCategoryModalContainer}>
+          <View style={styles.createCategoryModalHeader}>
+            <Text style={styles.createCategoryModalTitle}>Edit Category</Text>
+            <TouchableOpacity
+              style={styles.createCategoryCloseButton}
+              onPress={handleCancelEditCategory}
+            >
+              <Feather name="x" size={24} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.createCategoryModalContent}>
+            {/* Category Name Input */}
+            <Text style={styles.createCategoryInputLabel}>Category Name</Text>
+            <TextInput
+              style={styles.createCategoryTextInput}
+              value={editCategoryName}
+              onChangeText={setEditCategoryName}
+              placeholder="Enter category name"
+              placeholderTextColor={COLORS.textSecondary}
+            />
+
+            {/* Color Selection */}
+            <Text style={styles.createCategoryInputLabel}>Color</Text>
+            <View style={styles.createCategoryColorGrid}>
+              {PREDEFINED_COLORS.map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.createCategoryColorOption,
+                    { backgroundColor: color },
+                    editCategoryColor === color && styles.createCategorySelectedColorOption
+                  ]}
+                  onPress={() => setEditCategoryColor(color)}
+                />
+              ))}
+            </View>
+
+            {/* Icon Selection */}
+            <View style={styles.iconSectionHeader}>
+              <Text style={styles.createCategoryInputLabel}>Category Icon</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  console.log('More button pressed - opening emoji picker');
+                  setShowEmojiPicker(true);
+                }}
+                style={styles.browseAllButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.browseAllText}>More ›</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.iconScrollView}
+              contentContainerStyle={styles.iconScrollContent}
+              nestedScrollEnabled={true}
+            >
+              {PREDEFINED_ICONS.map((icon) => (
+                <TouchableOpacity
+                  key={icon}
+                  style={[
+                    styles.createCategoryIconOption,
+                    editCategoryIcon === icon && styles.createCategorySelectedIconOption
+                  ]}
+                  onPress={() => setEditCategoryIcon(icon)}
+                >
+                  <Text style={styles.createCategoryIconText}>{icon}</Text>
+                  {editCategoryIcon === icon && (
+                    <View style={styles.selectedIndicator}>
+                      <Text style={styles.checkmarkBadge}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Preview */}
+            <Text style={styles.createCategoryInputLabel}>Preview</Text>
+            <View style={styles.createCategoryPreviewContainer}>
+              <View style={[styles.createCategoryPreviewIcon, { backgroundColor: editCategoryColor + '20' }]}>
+                <Text style={styles.createCategoryPreviewEmoji}>{editCategoryIcon}</Text>
+              </View>
+              <Text style={styles.createCategoryPreviewName}>
+                {editCategoryName || 'Category Name'}
+              </Text>
+            </View>
+          </ScrollView>
+
+          <View style={styles.createCategoryModalActions}>
+            <StyledButton
+              title="Cancel"
+              onPress={handleCancelEditCategory}
+              variant="secondary"
+              style={styles.createCategoryCancelButton}
+            />
+            <StyledButton
+              title="Update Category"
+              onPress={handleUpdateCategory}
+              disabled={!editCategoryName.trim()}
+            />
+          </View>
+        </View>
+      </Modal>
+
       {/* Emoji Picker Modal */}
       <EmojiPicker
         visible={showEmojiPicker}
-        onEmojiSelect={(emoji) => setNewCategoryIcon(emoji)}
+        onEmojiSelect={(emoji) => {
+          if (isEditingCategory) {
+            setEditCategoryIcon(emoji);
+          } else {
+            setNewCategoryIcon(emoji);
+          }
+        }}
         onClose={() => setShowEmojiPicker(false)}
-        selectedEmoji={newCategoryIcon}
+        selectedEmoji={isEditingCategory ? editCategoryIcon : newCategoryIcon}
         title="Choose Category Icon"
       />
     </ScrollView>

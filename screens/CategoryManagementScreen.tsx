@@ -188,6 +188,13 @@ export default function CategoryManagementScreen() {
     setNewCategoryIcon(PREDEFINED_ICONS[0]);
   };
 
+  const handleEditFromViewing = () => {
+    if (viewingCategory) {
+      startEdit(viewingCategory);
+      setViewingCategory(null);
+    }
+  };
+
   const renderColorOption = (color: string) => (
     <TouchableOpacity
       key={color}
@@ -432,12 +439,20 @@ export default function CategoryManagementScreen() {
             <Text style={styles.modalTitle}>
               Entries in "{viewingCategory?.name}"
             </Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setViewingCategory(null)}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEditFromViewing}
+              >
+                <Feather name="edit-3" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setViewingCategory(null)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <FlatList
@@ -597,6 +612,18 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.title,
     fontWeight: 'bold',
     color: COLORS.textPrimary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.small,
+  },
+  editButton: {
+    padding: SPACING.small,
+    borderRadius: 6,
+    backgroundColor: COLORS.primary + '10',
+    borderWidth: 1,
+    borderColor: COLORS.primary + '20',
   },
   closeButton: {
     padding: SPACING.small,
