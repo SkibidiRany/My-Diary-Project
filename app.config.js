@@ -23,7 +23,11 @@ const googleSignInPlugin = [
 
 const plugins = [
   "expo-sqlite",
-  "expo-image-picker"
+  "expo-image-picker",
+  "expo-dev-client",
+  "expo-local-authentication",
+  "expo-secure-store",
+  "expo-file-system"
 ];
 
 if (!IS_WEB) {
@@ -45,7 +49,14 @@ export default {
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.rany.mydiaryapp",
+      "supportsTablet": true,
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
+        "NSCameraUsageDescription": "This app needs access to camera to take photos for diary entries.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select images for diary entries."
+      },
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -67,6 +78,9 @@ export default {
       "eas": {
         "projectId": "c49bf83d-1db1-4c22-8dbf-8ccdf7c12a2d"
       }
-    }
+    },
+    "sdkVersion": "54.0.0",
+    "platforms": ["ios", "android", "web"],
+    "privacy": "public"
   }
 };

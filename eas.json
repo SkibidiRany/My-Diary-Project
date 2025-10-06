@@ -16,6 +16,12 @@
       "android": {
         "buildType": "apk"
       },
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Release",
+        "credentialsSource": "remote",
+        "autoIncrement": "buildNumber"
+      },
       "env": {
         "GOOGLE_SERVICES_JSON_BASE64": "@GOOGLE_SERVICES_JSON_BASE64"
       }
